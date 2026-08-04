@@ -2,3 +2,16 @@
 !.gitignore
 !.github/
 !.github/CODEOWNERS
+!Palantir的本体论讨论.docx
+!doc-extracted.txt
+!agent-ontology-master-plan.md
+!product-positioning-and-business-model.md
+!dual-ontology-three-layer-architecture-baseline.md
+!documentation-system.md
+!stage-a-dual-ontology-contract-freeze-implementation-plan.md
+!user-research-and-requirements.md
+!lld-19-document-governance.md
+!lld-19/
+!lld-19/**
+!contracts/
+!contracts/**

@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/stage-traceability-view.v1.schema.json",
+  "title": "Stage Traceability View v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "view_id",
+    "version",
+    "stage",
+    "matrix_ref",
+    "node_ids",
+    "edge_ids",
+    "release_review"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "view_id": {
+      "type": "string",
+      "pattern": "^VIEW-STAGE-[A-F]$"
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "stage": {
+      "type": "string",
+      "pattern": "^Stage [A-F]$"
+    },
+    "matrix_ref": {
+      "$ref": "#/$defs/repositoryPath"
+    },
+    "node_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9-]+$"
+      }
+    },
+    "edge_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^EDGE-[0-9]{4}$"
+      }
+    },
+    "release_review": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "status",
+            "author_subject",
+            "implemented_by_subjects",
+            "reviewer_subject",
+            "reviewed_at",
+            "evidence",
+            "document_path",
+            "document_digest",
+            "atomic_design_manifest_digest"
+          ],
+          "properties": {
+            "status": {
+              "const": "APPROVED"
+            },
+            "author_subject": {
+              "$ref": "#/$defs/githubNodeId"
+            },
+            "implemented_by_subjects": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/githubNodeId"
+              }
+            },
+            "reviewer_subject": {
+              "$ref": "#/$defs/githubNodeId"
+            },
+            "reviewed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "evidence": {
+              "type": "object",
+              "required": [
+                "repository_id",
+                "pull_request_number",
+                "head_sha",
+                "review_node_id",
+                "reviewer_type",
+                "codeowner_verified",
+                "permission"
+              ],
+              "properties": {
+                "repository_id": {
+                  "$ref": "#/$defs/githubNodeId"
+                },
+                "pull_request_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "head_sha": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                },
+                "review_node_id": {
+                  "$ref": "#/$defs/githubNodeId"
+                },
+                "reviewer_type": {
+                  "const": "User"
+                },
+                "codeowner_verified": {
+                  "const": true
+                },
+                "permission": {
+                  "enum": [
+                    "maintain",
+                    "admin"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "document_path": {
+              "$ref": "#/$defs/repositoryPath"
+            },
+            "document_digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "atomic_design_manifest_digest": {
+              "$ref": "#/$defs/digest"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "githubNodeId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_=-]{8,}$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    }
+  },
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-A"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage A"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-B"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage B"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-C"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage C"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-D"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage D"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-E"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage E"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "view_id": {
+            "const": "VIEW-STAGE-F"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage F"
+          }
+        }
+      }
+    }
+  ]
+}

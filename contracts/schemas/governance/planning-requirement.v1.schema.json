@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/planning-requirement.v1.schema.json",
+  "title": "Planning Requirement v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "id",
+    "version",
+    "title",
+    "user_requirement_refs",
+    "scope",
+    "priority",
+    "success_metrics",
+    "target_stage",
+    "constraints",
+    "risks",
+    "status",
+    "product_owner_confirmation_ref"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^PR-[A-Z0-9]+-[0-9]{3}$"
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "user_requirement_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^UR-[A-Z0-9]+-[0-9]{3}$"
+      }
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "unranked"
+      ]
+    },
+    "success_metrics": {
+      "$ref": "#/$defs/nonEmptyStrings"
+    },
+    "target_stage": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^Stage [A-F]$"
+      }
+    },
+    "constraints": {
+      "$ref": "#/$defs/nonEmptyStrings"
+    },
+    "risks": {
+      "$ref": "#/$defs/nonEmptyStrings"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "discovered",
+        "validated",
+        "confirmed",
+        "superseded",
+        "rejected"
+      ]
+    },
+    "product_owner_confirmation_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^APR-[A-Z0-9-]+$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "confirmed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "product_owner_confirmation_ref": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "product_owner_confirmation_ref": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "unevaluatedProperties": false
+}

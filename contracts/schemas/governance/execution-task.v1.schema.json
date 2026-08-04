@@ -1,0 +1,457 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/execution-task.v1.schema.json",
+  "title": "Execution Task v1",
+  "type": "object",
+  "required": [
+    "id",
+    "plan_task",
+    "title",
+    "status",
+    "target_stage",
+    "design_refs",
+    "approved_lld_ref",
+    "approved_lld_version",
+    "approved_lld_digest",
+    "atomic_design_manifest_digest",
+    "files",
+    "prerequisites",
+    "commands",
+    "expected_results",
+    "verification_commands",
+    "evidence",
+    "blocked_reason",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^TASK-STAGE[A-F]-[0-9]{3}$"
+    },
+    "plan_task": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 14
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "$ref": "#/$defs/taskStatus"
+    },
+    "target_stage": {
+      "type": "string",
+      "pattern": "^Stage [A-F]$"
+    },
+    "design_refs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?:DR-MOD[0-9]{2}-[0-9]{3}|LLD-[0-9]{2})$"
+      }
+    },
+    "approved_lld_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^lld-[0-9]{2}[a-z0-9-]*\\.md$"
+    },
+    "approved_lld_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "approved_lld_digest": {
+      "$ref": "#/$defs/nullableDigest"
+    },
+    "atomic_design_manifest_digest": {
+      "$ref": "#/$defs/nullableDigest"
+    },
+    "files": {
+      "$ref": "#/$defs/paths"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expected_results": {
+      "$ref": "#/$defs/nonEmptyStrings"
+    },
+    "verification_commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/evidenceRef"
+      }
+    },
+    "blocked_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "started_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ready",
+              "in_progress",
+              "verified",
+              "accepted"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approved_lld_ref": {
+            "type": "string"
+          },
+          "approved_lld_version": {
+            "type": "string"
+          },
+          "approved_lld_digest": {
+            "type": "string"
+          },
+          "atomic_design_manifest_digest": {
+            "type": "string"
+          },
+          "commands": {
+            "minItems": 1
+          },
+          "verification_commands": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "planned"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approved_lld_ref": {
+            "type": "null"
+          },
+          "approved_lld_version": {
+            "type": "null"
+          },
+          "approved_lld_digest": {
+            "type": "null"
+          },
+          "atomic_design_manifest_digest": {
+            "type": "null"
+          },
+          "commands": {
+            "maxItems": 0
+          },
+          "verification_commands": {
+            "maxItems": 0
+          },
+          "evidence": {
+            "maxItems": 0
+          },
+          "started_at": {
+            "type": "null"
+          },
+          "completed_at": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blocked_reason": {
+            "type": "string"
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "approved_lld_ref": {
+                "type": "null"
+              },
+              "approved_lld_version": {
+                "type": "null"
+              },
+              "approved_lld_digest": {
+                "type": "null"
+              },
+              "atomic_design_manifest_digest": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "properties": {
+              "approved_lld_ref": {
+                "type": "string"
+              },
+              "approved_lld_version": {
+                "type": "string"
+              },
+              "approved_lld_digest": {
+                "type": "string"
+              },
+              "atomic_design_manifest_digest": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "properties": {
+          "blocked_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 1,
+            "contains": {
+              "properties": {
+                "kind": {
+                  "const": "verification"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            }
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 2,
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "kind": {
+                      "const": "verification"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "kind": {
+                      "const": "approval"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            ]
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "not": {
+              "enum": [
+                "verified",
+                "accepted"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "completed_at": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "in_progress"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "taskStatus": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "ready",
+        "in_progress",
+        "blocked",
+        "verified",
+        "accepted"
+      ]
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/repositoryPath"
+      }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "nullableDigest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidenceRef": {
+      "type": "object",
+      "required": [
+        "path",
+        "digest",
+        "kind"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "verification",
+            "approval"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

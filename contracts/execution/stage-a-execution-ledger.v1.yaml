@@ -1,0 +1,336 @@
+$schema: ../schemas/governance/execution-ledger.v1.schema.json
+ledger_id: LEDGER-STAGE-A
+version: 0.1.0
+stage: Stage A
+updated_at: '2026-08-03T00:00:00+08:00'
+design_tasks:
+- id: DTASK-STAGEA-000
+  plan_task: 0
+  title: 冻结用户需求事实源与三级文档治理
+  status: blocked
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - requirement
+  - lld
+  - contract
+  - traceability
+  - governance
+  files:
+  - user-research-and-requirements.md
+  - lld-19-document-governance.md
+  - lld-19/sections
+  - contracts/schemas/governance
+  - contracts/traceability/requirements-traceability.v1.yaml
+  - contracts/execution/stage-a-execution-ledger.v1.yaml
+  - documentation-system.md
+  commands:
+  - python -c "import json, pathlib; [json.loads(path.read_text(encoding='utf-8')) for path in pathlib.Path('contracts/schemas/governance').glob('*.schema.json')]"
+  expected_results:
+  - 需求、证据、追溯与执行台账结构可解析
+  - 未确认需求和未批准设计不进入活动状态
+  evidence:
+  - path: contracts/schemas/governance/requirements-traceability.v1.schema.json
+    digest: sha256:88ab14b16c960f4f852cf7dd823d30b21d62834d18bf40b3ecd82917fd8f6936
+    kind: work_product
+  - path: lld-19-document-governance.md
+    digest: sha256:bf863434545647e509b682cdf55ba5f8ec751fd8b15a7a34d93c9e77df1b270d
+    kind: work_product
+  blocked_reason: PR-ONTO-006 尚未基于 confirmed UR 获得 Product Owner 确认；当前产物仅可作为待评审工作成果，不得进入 verified 或 accepted
+  started_at: '2026-08-03T00:00:00+08:00'
+  completed_at: null
+- id: DTASK-STAGEA-001
+  plan_task: 1
+  title: 冻结契约元规则和 Stage A 校验依赖
+  status: planned
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - contract
+  - design_gate
+  files:
+  - requirements-stage-a.txt
+  - contracts/schemas/common
+  commands: []
+  expected_results:
+  - 共享 Schema 使用 Draft 2020-12 且拒绝未知字段
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-002
+  plan_task: 2
+  title: 编写九份跨模块 ADR 并进入独立评审
+  status: planned
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - adr
+  files:
+  - adr
+  commands: []
+  expected_results:
+  - 九项跨模块决策具有唯一规范位置并进入独立评审
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-003
+  plan_task: 3
+  title: 完成 LLD-15 业务本体服务与核心 Schema
+  status: planned
+  planning_refs:
+  - PR-ONTO-001
+  allowed_artifact_kinds:
+  - lld
+  - contract
+  files:
+  - lld-15-ontology-service.md
+  - contracts/openapi/ontology-service.v1.yaml
+  - contracts/schemas/ontology
+  commands: []
+  expected_results:
+  - 业务本体服务设计与核心契约完成且无未决项
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-004
+  plan_task: 4
+  title: 冻结 LLD-17 的策略、血缘和审计契约
+  status: planned
+  planning_refs:
+  - PR-ONTO-002
+  allowed_artifact_kinds:
+  - lld
+  - contract
+  files:
+  - lld-17-ontology-governance.md
+  - contracts/openapi/ontology-governance.v1.yaml
+  - contracts/schemas/ontology/authorization-policy.v1.schema.json
+  - contracts/schemas/events
+  commands: []
+  expected_results:
+  - 策略、血缘和审计职责唯一且契约一致
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-005
+  plan_task: 5
+  title: 完成 LLD-16 连接器运行时与执行契约
+  status: planned
+  planning_refs:
+  - PR-ONTO-002
+  allowed_artifact_kinds:
+  - lld
+  - contract
+  files:
+  - lld-16-source-connector-runtime.md
+  - contracts/openapi/source-connector-runtime.v1.yaml
+  - contracts/schemas/ontology/action-binding.v1.schema.json
+  - contracts/schemas/events/action-execution.v1.schema.json
+  commands: []
+  expected_results:
+  - 连接器、幂等、补偿与执行顺序契约冻结
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-006
+  plan_task: 6
+  title: 完成 LLD-18 隔离模拟契约
+  status: planned
+  planning_refs:
+  - PR-ONTO-001
+  allowed_artifact_kinds:
+  - lld
+  - contract
+  files:
+  - lld-18-ontology-simulation.md
+  - contracts/openapi/ontology-simulation.v1.yaml
+  - contracts/schemas/ontology/simulation-definition.v1.schema.json
+  commands: []
+  expected_results:
+  - 模拟环境与生产写入严格隔离
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-007
+  plan_task: 7
+  title: 冻结 CRM、ERP、OA 三域 Schema 包与 Cypher 模型
+  status: planned
+  planning_refs:
+  - PR-ONTO-001
+  allowed_artifact_kinds:
+  - contract
+  files:
+  - contracts/domains/crm/ontology.v1.json
+  - contracts/domains/erp/ontology.v1.json
+  - contracts/domains/oa/ontology.v1.json
+  - contracts/cypher
+  commands: []
+  expected_results:
+  - 三域 Schema 与图约束无冲突
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-008
+  plan_task: 8
+  title: 修订 LLD-07、LLD-09 并重写 LLD-08
+  status: planned
+  planning_refs:
+  - PR-ONTO-003
+  - PR-ONTO-004
+  allowed_artifact_kinds:
+  - lld
+  files:
+  - lld-07-knowledge-base.md
+  - lld-09-agent-runtime.md
+  - lld-08-workflow-orchestration.md
+  commands: []
+  expected_results:
+  - 知识、Agent 与工作流边界统一到 Ontology Action
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-009
+  plan_task: 9
+  title: 完成 LLD-10、12、14 影响分析和 LLD-13 迁移声明
+  status: planned
+  planning_refs:
+  - PR-ONTO-004
+  - PR-ONTO-005
+  allowed_artifact_kinds:
+  - lld
+  files:
+  - lld-10-multi-agent-collaboration.md
+  - lld-12-skill-library.md
+  - lld-13-business-connectors.md
+  - lld-14-governance-config.md
+  commands: []
+  expected_results:
+  - 影响分析与迁移边界完整且不新增越权运行时职责
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-010
+  plan_task: 10
+  title: 建立治理职责矩阵和双向追踪矩阵
+  status: planned
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - governance
+  - traceability
+  files:
+  - contracts/governance/responsibility-matrix.v1.yaml
+  - contracts/traceability/stage-a-traceability.v1.yaml
+  commands: []
+  expected_results:
+  - 治理职责唯一且 Stage A 双向追溯完整
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-012
+  plan_task: 12
+  title: 统一 Tier-1 文档规则并升级两阶段阻断门禁
+  status: planned
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - design_gate
+  - governance
+  files:
+  - .github/workflows/doc-check.yml
+  - documentation-system.md
+  - agent-ontology-master-plan.md
+  - dual-ontology-three-layer-architecture-baseline.md
+  commands: []
+  expected_results:
+  - Tier-1 无规范冲突且 PR 与 push 门禁一致
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: DTASK-STAGEA-014
+  plan_task: 14
+  title: Stage A 独立封版评审与最终检查
+  status: planned
+  planning_refs:
+  - PR-ONTO-006
+  allowed_artifact_kinds:
+  - traceability
+  - governance
+  - design_gate
+  files:
+  - contracts/traceability/stage-a-traceability.v1.yaml
+  commands: []
+  expected_results:
+  - 任务 0 至 13 的全部已登记前置任务均为 verified 或 accepted 且证据有效，独立评审绑定当前摘要，最终门禁通过
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+implementation_tasks:
+- id: TASK-STAGEA-011
+  plan_task: 11
+  title: 实现 Stage A 文档与契约校验程序
+  status: planned
+  target_stage: Stage A
+  design_refs:
+  - DR-MOD19-002
+  - LLD-19
+  approved_lld_ref: null
+  approved_lld_version: null
+  approved_lld_digest: null
+  atomic_design_manifest_digest: null
+  files:
+  - scripts/check_doc_consistency.py
+  - scripts/check_contracts.py
+  - scripts/check_stage_a_gate.py
+  - tests/stage_a/test_doc_consistency.py
+  - tests/stage_a/test_contracts.py
+  - tests/stage_a/test_stage_a_gate.py
+  prerequisites:
+  - LLD-19 取得有效中期批准
+  - 治理 Schema 已冻结
+  commands: []
+  expected_results:
+  - 三个检查器及正向测试通过
+  verification_commands: []
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null
+- id: TASK-STAGEA-013
+  plan_task: 13
+  title: 执行负向门禁验证
+  status: planned
+  target_stage: Stage A
+  design_refs:
+  - DR-MOD19-006
+  - DR-MOD19-007
+  - LLD-19
+  approved_lld_ref: null
+  approved_lld_version: null
+  approved_lld_digest: null
+  atomic_design_manifest_digest: null
+  files:
+  - tests/stage_a
+  prerequisites:
+  - TASK-STAGEA-011 已 verified
+  - LLD-19 中期批准摘要仍有效
+  commands: []
+  expected_results:
+  - 计划规定的全部负向输入均被拒绝
+  verification_commands: []
+  evidence: []
+  blocked_reason: null
+  started_at: null
+  completed_at: null

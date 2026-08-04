@@ -1,0 +1,1953 @@
+ 
+ 企业级智能体本体基座 — 四层可组合架构设计方案 
+ 目录
+ 1 文档概述 
+ 2 架构背景与目标 
+ 3 设计原则 
+ 4 总体架构设计 
+ 4.1 四层架构总览 
+ 4.2 层间通信协议 
+ 4.3 技术选型总览 
+ 5 工作流编排层 
+ 5.1 状态图引擎 
+ 5.2 节点抽象与路由 
+ 5.3 状态持久化 
+ 5.4 人在回路 
+ 5.5 异常处理与恢复 
+ 6 智能体执行层 
+ 6.1 智能体架构 
+ 6.2 规划与意图识别 
+ 6.3 任务拆解 
+ 6.4 工具调用与 MCP 集成 
+ 6.5 Sub-Agent 协同 
+ 6.6 Agent 生命周期 
+ 7 MCP 统一协议层 
+ 7.1 MCP Server 架构 
+ 7.2 企业系统封装规范 
+ 7.3 工具发现与注册 
+ 7.4 安全与权限 
+ 8 数据与知识底座层 
+ 8.1 知识库管理 
+ 8.2 三层记忆体系 
+ 8.3 LlamaIndex 集成 
+ 9 横切关注点 
+ 9.1 可观测性 
+ 9.2 安全与合规 
+ 9.3 成本控制 
+ 10 部署架构 
+ 11 技术栈与版本锁定 
+ 12 实施路线图 
+ 13 风险评估与应对 
+ ARCHITECTURE DESIGN DOCUMENT 
+ 企业级智能体本体基座
+四层可组合架构设计方案
+ 基于 LangGraph + LangChain + MCP + LlamaIndex 的可组合智能体平台架构
+ 版本 v1.0 
+ 日期 2026-07-24 
+ 状态 实施基准 
+ 文档性质 唯一事实方案 
+ 01 文档概述
+ 1.1 文档目的
+ 本文档定义企业级智能体本体基座的技术架构设计方案，作为架构搭建与实施阶段的 唯一事实方案 （Single Source of Truth）。所有架构决策、技术选型、组件设计、接口规范、部署方案均以本文档为准。
+ 本方案解决的核心问题是：如何在一个统一平台上同时管理知识库、自主编排 AI 工作流、让工作流节点调用具备自主规划能力的智能体，并连接企业业务系统执行特定场景。
+ 1.2 适用范围
+ 角色
+ 使用方式
+ 架构师
+ 依据本文档进行架构评审与技术决策
+ 后端工程师
+ 依据本文档进行组件实现与接口开发
+ DevOps 工程师
+ 依据本文档进行环境搭建与部署配置
+ 技术管理层
+ 依据本文档进行资源规划与风险评审
+ 1.3 术语定义
+ 术语
+ 定义
+ 智能体本体基座
+ 承载智能体运行、工作流编排、知识管理、工具调用的统一平台
+ 工作流节点
+ 工作流图中的一个执行单元，可以是函数调用、Agent 调用或决策路由
+ MCP
+ Model Context Protocol，模型上下文协议，标准化 Agent 与外部工具/系统的上下文交换
+ A2A
+ Agent-to-Agent Protocol，Agent 间通信协议，用于跨 Agent 任务委派与结果回传
+ HITL
+ Human-in-the-Loop，人在回路，在关键决策点暂停执行等待人工审批
+ Checkpoint
+ 状态检查点，将工作流执行状态持久化以支持故障恢复
+ Sub-Agent
+ 由主控 Agent 委派的子智能体，在隔离上下文中执行特定子任务
+ Agentic RAG
+ 智能体驱动的检索增强生成，Agent 自主决定检索策略与查询重写
+ 02 架构背景与目标
+ 2.1 业务背景
+ 企业需要构建一个统一的智能体平台，该平台需要满足以下业务诉求：
+ 知识管理 ：管理企业内部文档、流程规范、业务数据，支持智能体按需检索
+ 工作流编排 ：将复杂业务场景拆解为有序的工作流，工作流的节点可以调用智能体执行
+ 智能体自主性 ：智能体需要具备自主规划、意图识别、任务拆解、工具调用、MCP 连接、协同 Sub-Agent 的能力
+ 业务系统集成 ：连接 CRM、ERP、OA 等业务系统，拉取数据并执行特定业务操作
+ 2.2 核心需求分析
+ 基于上述业务背景，平台需要覆盖以下五项核心能力，每项能力对应架构中的一个层级：
+ 需求维度
+ 具体能力
+ 架构层级
+ 知识库管理
+ 文档接入、索引构建、检索增强、Agentic RAG
+ 第四层：数据与知识底座
+ 工作流编排
+ 图式编排、条件分支、循环、状态持久化、人在回路
+ 第一层：工作流编排层
+ 智能体自主性
+ 规划、意图识别、任务拆解、Tool 调用、Sub-Agent 协同
+ 第二层：智能体执行层
+ 工具与系统接入
+ MCP 协议标准化接入、CRM/ERP/OA 封装、工具发现
+ 第三层：MCP 统一协议层
+ 业务场景执行
+ 拉取数据、执行操作、结果回写、状态反馈
+ 跨层协作（第三层 + 第二层）
+ 2.3 设计目标
+ 可组合性 ：各层独立演进，通过标准协议通信，任何一层可单独替换或升级
+ 生产就绪 ：具备状态持久化、故障恢复、人在回路、全链路可观测性
+ 企业级安全 ：零信任架构、RBAC 权限模型、审计日志、四层幻觉防御
+ 渐进式落地 ：支持从单一低风险场景起步，逐步扩展至全量业务
+ 成本可控 ：模型路由策略、缓存优化、预算告警，防止单个失控 Agent 消耗过高
+ 2.4 约束条件
+ 开发语言 Python 3.11+（主语言），TypeScript（前端/可视化） 
+ 容器环境 Docker + Kubernetes 1.28+ 
+ 数据库 PostgreSQL 15+（状态持久化）、Redis 7+（缓存）、Milvus 2.4+（向量检索）、Neo4j 5+（知识图谱） 
+ LLM Provider OpenAI / Anthropic Claude / Azure OpenAI / 本地 Ollama（可切换） 
+ 部署模式 云原生（K8s），支持公有云与私有化部署 
+ 03 设计原则
+ 3.1 协议优先（Protocol-First）
+ 层与层之间通过标准协议通信，而非直接函数调用。MCP 负责工具与系统接入，A2A 负责 Agent 间协作。协议优先的收益在于：任何一层的实现替换不影响其他层，且跨框架的组件可以自由组合。
+ 具体表现为：工作流编排层通过 MCP 协议调用工具，不直接耦合工具实现；智能体之间通过 A2A 协议通信，不依赖特定框架的多 Agent 机制。
+ 3.2 可组合性（Composability）
+ 每一层是一个独立的可替换单元。工作流编排层可以用 LangGraph，也可以在未来替换为其他图编排引擎；知识库层可以用 LlamaIndex，也可以替换为其他 RAG 框架。可组合性通过两个机制实现：
+ 双向 MCP ：框架既消费 MCP 工具，也暴露自身为 MCP Server，实现跨框架互调
+ A2A 通信 ：Agent 之间通过结构化消息通信，不依赖共享内存或框架内部状态
+ 3.3 状态显式化（Explicit State）
+ 所有工作流状态、Agent 上下文、工具调用结果都必须显式持久化。不依赖进程内存中的隐式状态。这样设计的收益是：任何一步执行失败都可以从断点恢复，长时间运行的任务可以暂停和恢复，且状态可审计。
+ 具体实现方式：LangGraph 的 Checkpointer 将每个节点执行后的状态持久化到 PostgreSQL；Agent 的对话历史和工具调用记录存储在独立的会话表中；MCP 工具调用的输入输出记录在审计日志中。
+ 3.4 安全边界（Security Boundary）
+ 每一层都有明确的安全边界。工具调用必须经过权限校验，敏感操作必须触发人工审批，Agent 的权限遵循最小权限原则。安全策略在执行到达动作之前强制生效，而非依赖模型层的软约束。
+ 3.5 可观测性（Observability）
+ Agent 的非确定性使其行为难以预测，没有全链路可观测性就无法运维。每一层都必须输出结构化的追踪数据，包括：工作流节点执行时间、Agent 推理过程、工具调用输入输出、LLM Token 消耗。可观测性从第一天就要接入，不是事后补充。
+ 04 总体架构设计
+ 4.1 四层架构总览
+ 本方案采用四层可组合架构。从上到下依次为：工作流编排层、智能体执行层、MCP 统一协议层、数据与知识底座层。各层通过标准协议通信，层间依赖方向严格自上而下。
+ 第三层：MCP 统一协议层
+ 第一层：工作流编排层
+ 节点调用 Agent
+ 节点调用 Agent
+ A2A 协议
+ MCP 调用
+ MCP 调用
+ 第四层：数据与知识底座层
+ LlamaIndex
+知识库 · Agentic RAG
+ PostgreSQL
+状态持久化
+ Milvus
+向量检索
+ Neo4j
+知识图谱
+ Redis
+短期记忆
+ 第二层：智能体执行层
+ LangGraph
+状态图引擎
+ 规划 Agent
+意图识别 · 任务拆解
+ 执行 Agent
+Tool 调用 · Sub-Agent
+ MCP 协议总线
+工具发现 · 权限校验 · 审计
+ 图 4-1：四层架构总览 
+ 四层的职责边界如下：
+ 层级
+ 核心组件
+ 职责
+ 对上接口
+ 第一层
+工作流编排层
+ LangGraph
+ 工作流定义、状态管理、条件路由、人在回路、故障恢复
+ 工作流 API（启动/查询/控制）
+ 第二层
+智能体执行层
+ LangChain + DeepAgent
+ Agent 推理、规划、任务拆解、工具选择、Sub-Agent 协同
+ Agent 调用接口（节点内调用）
+ 第三层
+MCP 统一协议层
+ MCP Server 集群
+ 工具发现、权限校验、调用代理、审计记录、业务系统封装
+ MCP 工具接口（标准化 JSON-RPC）
+ 第四层
+数据与知识底座层
+ LlamaIndex + PostgreSQL + Milvus + Neo4j + Redis
+ 知识库管理、RAG 检索、状态持久化、记忆管理
+ 检索 API + 数据读写 API
+ 4.2 层间通信协议
+ 层间通信遵循以下协议规范：
+ 通信路径
+ 协议
+ 数据格式
+ 传输方式
+ 工作流层 → Agent 层
+ LangGraph 节点函数调用
+ Python 函数签名（state → dict）
+ 进程内调用
+ Agent 层 → MCP 层
+ MCP（JSON-RPC 2.0）
+ 工具调用 schema（name + arguments）
+ stdio（本地）/ Streamable HTTP（远程）
+ Agent 层 → Agent 层
+ A2A Protocol
+ 结构化消息（task_id + payload + context）
+ HTTP / 消息队列
+ MCP 层 → 数据层
+ 各数据库原生协议
+ SQL / 向量查询 / Cypher
+ TCP（直连）
+ Agent 层 → 数据层
+ LlamaIndex Workflow API
+ 检索请求 + 检索结果
+ 进程内调用 / MCP（通过 workflow_as_mcp）
+ 4.3 技术选型总览
+ 以下为各层的核心组件选型及其选型理由。每个选型决策都对应前述五项设计目标中的至少一项。
+ 层级
+ 组件
+ 版本
+ 选型理由
+ 工作流编排层
+ LangGraph
+ 0.2+
+ 唯一原生支持图式编排 + 节点调用 Agent + 状态持久化 + 人在回路的框架 [1] 
+ LangGraph Platform
+ 2024 GA
+ 提供托管部署、水平扩展、Webhook、SLA
+ 智能体执行层
+ LangChain
+ 0.3+
+ 1000+ 集成生态，Agent 抽象（Tool / Chain / Memory） [2] 
+ langchain-mcp-adapters
+ 0.2.1+
+ 将 MCP Server 工具转为 LangChain Tool，支持多服务器连接 [3] 
+ DeepAgent（可选）
+ 0.2+
+ 原生规划（TodoList）+ 文件系统草稿本 + Sub-Agent 上下文隔离 [4] 
+ MCP 统一协议层
+ MCP Protocol
+ 2024-11+
+ 事实标准协议，所有主流框架均已支持，一次开发多 Agent 复用 [5] 
+ LangGraph Agent Server
+ 0.2.3+
+ 将 Agent 暴露为 MCP Server，支持跨框架互调 [6] 
+ 数据与知识底座层
+ LlamaIndex
+ 0.11+
+ RAG 专长，支持 Agentic RAG，可通过 workflow_as_mcp 暴露 [5] 
+ PostgreSQL
+ 15+
+ LangGraph Checkpoint 持久化后端，支持状态恢复
+ Milvus
+ 2.4+
+ 长期情景记忆，高吞吐向量检索，租户命名空间隔离
+ Neo4j
+ 5+
+ 语义知识图谱，业务实体关系与规则约束
+ Redis
+ 7+
+ 短期工作记忆，会话上下文缓存，自动过期
+ 选型决策记录 
+ 选型排除了以下候选方案：
+ 仅用 CrewAI ：Flow+Crew 双层架构支持工作流节点调用 Agent，但状态控制粒度粗于 LangGraph，偏事件驱动而非图式编排
+ 仅用 Microsoft Agent Framework ：双轨编排设计完整，但强绑定 Azure 生态，.NET 优先，GA 仅 3 个月（2026-04），生产验证不足 [7] 
+ 仅用 DeepAgent ：本身不是工作流引擎，依赖 LangGraph 底层；2025-07 首发，框架太年轻 [4] 
+ 仅用 Dify/Coze ：可视化工作流构建器有天花板，复杂 Agent 自主性场景受限，企业治理需自管 [8] 
+ 05 工作流编排层 — LangGraph
+ 工作流编排层是整个基座的最顶层，负责将业务场景拆解为有序的工作流图，管理执行状态，并在关键节点调用智能体。LangGraph 是这一层的唯一选型，因为它在「图式编排 + 节点可调用 Agent + 状态持久化 + 人在回路」这四项核心能力上没有替代方案 [1] [9] 。
+ 5.1 状态图引擎
+ LangGraph 的核心抽象是有向图（Directed Graph）。图的组成要素如下：
+ 要素
+ 类型
+ 说明
+ State
+ TypedDict
+ 全局状态对象，在节点间传递。使用 Python TypedDict 定义 schema，所有节点共享同一状态结构
+ Node
+ Callable[[State], dict]
+ 节点是一个 Python 函数，接收当前状态，返回状态更新（partial dict）。节点可以是：普通函数、Agent 调用、子图、或路由决策
+ Edge
+ str → str
+ 边定义节点间的固定流转关系。从节点 A 到节点 B 的直连边
+ Conditional Edge
+ Callable[[State], str]
+ 条件边通过路由函数返回下一节点名称，实现分支和循环
+ Checkpointer
+ BaseCheckpointSaver
+ 状态持久化器，在每个节点执行后自动保存状态快照
+ State 的设计规范如下。所有工作流共享一个基础状态 schema，各业务工作流在此之上扩展：
+ from typing import TypedDict, Annotated, Literal
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.postgres import PostgresSaver
+class WorkflowState(TypedDict):
+ # 基础字段
+ task_id: str # 工作流实例 ID
+ user_id: str # 发起用户
+ tenant_id: str # 租户隔离
+ messages: Annotated[list, "add"] # 消息列表，使用 add reducer 累加
+ current_step: str # 当前执行步骤
+ # 业务扩展字段
+ intent: str # 意图识别结果
+ plan: list[dict] # 任务拆解计划
+ results: Annotated[list, "add"] # 各节点结果累积
+ status: Literal["running", "paused", "completed", "failed"]
+ error: str | None # 错误信息 
+ 以下是一个典型工作流的状态流转示意，展示了从意图识别到任务执行再到结果汇总的完整路径：
+ 用户发起请求
+ 意图已识别
+ 计划已生成
+ 需要工具
+ 需要委派
+ 工具结果返回
+ 子任务完成
+ 所有任务完成
+ 输出最终结果
+ 敏感操作
+ 审批通过
+ 审批拒绝
+ IntentRecognize
+ TaskDecompose
+ AgentExecute
+ ToolCall
+ SubAgent
+ ResultAggregate
+ HITLReview
+ 图 5-1：工作流状态流转 
+ 5.2 节点抽象与路由
+ 节点类型定义
+ 工作流中的节点分为四类，每类有明确的职责边界和调用规范：
+ 节点类型
+ 职责
+ 调用方式
+ 返回值
+ 函数节点
+ 执行确定性逻辑（数据转换、格式化、校验）
+ 直接 Python 函数调用
+ State 更新 dict
+ Agent 节点
+ 调用智能体执行推理、规划、工具调用
+ 通过 LangChain AgentExecutor 或 create_react_agent 调用
+ State 更新 dict（含 agent 输出）
+ 路由节点
+ 根据状态决定下一步走向
+ 条件边函数
+ 下一节点名称 str
+ 子图节点
+ 嵌套调用另一个完整工作流
+ StateGraph.add_node(subgraph.compile())
+ 子图执行后的 State 更新
+ Agent 节点的设计模式
+ Agent 节点是工作流与智能体执行层的对接点。一个 Agent 节点的标准实现如下：
+ from langchain.agents import create_react_agent
+from langchain_mcp_adapters.client import MultiServerMCPClient
+def create_agent_node(agent_config):
+ """创建一个工作流节点，内部调用 Agent"""
+ # 1. 初始化 MCP 客户端，连接所需的 MCP Server
+ mcp_client = MultiServerMCPClient(agent_config["mcp_servers"])
+ # 2. 获取工具列表（从 MCP Server 动态发现）
+ tools = asyncio.run(mcp_client.get_tools())
+ # 3. 创建 Agent
+ agent = create_react_agent(
+ model=agent_config["llm"],
+ tools=tools,
+ prompt=agent_config["system_prompt"]
+ )
+ # 4. 返回工作流节点函数
+ def agent_node(state: WorkflowState) -> dict:
+ result = agent.invoke({
+ "messages": state["messages"],
+ "plan": state.get("plan", [])
+ })
+ return {
+ "messages": result["messages"],
+ "results": [{"step": state["current_step"],
+ "output": result["output"]}]
+ }
+ return agent_node 
+ 条件路由
+ 条件路由通过条件边实现。路由函数接收当前状态，返回下一节点名称。以下是一个意图分发路由的示例：
+ def route_by_intent(state: WorkflowState) -> str:
+ """根据意图识别结果路由到不同 Agent 节点"""
+ intent = state.get("intent", "")
+ if intent == "knowledge_query":
+ return "rag_agent"
+ elif intent == "data_analysis":
+ return "analysis_agent"
+ elif intent == "business_operation":
+ return "business_agent"
+ else:
+ return "fallback_agent"
+# 在图中添加条件边
+graph.add_conditional_edges(
+ "intent_recognize",
+ route_by_intent,
+ {
+ "rag_agent": "rag_agent",
+ "analysis_agent": "analysis_agent",
+ "business_agent": "business_agent",
+ "fallback_agent": "fallback_agent"
+ }
+) 
+ 5.3 状态持久化
+ 状态持久化是生产就绪的核心保障。LangGraph 的 Checkpointer 机制在每个节点执行后自动将状态写入持久化存储 [9] 。
+ 持久化架构
+ 存储
+ 用途
+ 配置
+ PostgreSQL
+ 生产环境 Checkpoint 存储
+ PostgresSaver，连接池 min=5 max=20
+ SQLite
+ 开发环境 Checkpoint 存储
+ SqliteSaver，单文件，用于本地调试
+ Redis
+ 会话级短期缓存
+ TTL 30 分钟，存储活跃会话的状态快照
+ Checkpoint 配置
+ from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
+# 生产环境连接池
+pool = ConnectionPool(
+ conninfo="postgresql://user:pass@postgres:5432/agent_platform",
+ max_size=20,
+ kwargs={"autocommit": True}
+)
+checkpointer = PostgresSaver(pool)
+checkpointer.setup() # 自动创建所需表结构
+# 编译工作流图时注入 checkpointer
+app = graph.compile(
+ checkpointer=checkpointer,
+ interrupt_before=["hitl_review"], # 在人工审批节点前暂停
+) 
+ Checkpoint 存储的数据结构包含：thread_id（会话标识）、checkpoint_id（快照 ID）、parent_id（父快照，用于回溯）、channel_values（完整状态快照）、metadata（执行元数据，含节点名称、执行时间、Token 消耗）。
+ 故障恢复规范 
+ 当工作流执行到某节点失败时，系统从最近的 Checkpoint 恢复，而非从头执行。恢复流程：
+ 通过 thread_id 查询最新的 checkpoint_id
+ 加载 channel_values 恢复状态
+ 从失败节点重新执行（而非从图的起始节点）
+ 失败节点的重试次数限制为 3 次，超过后标记 status="failed"
+ 5.4 人在回路（Human-in-the-Loop）
+ 人在回路通过 LangGraph 的 interrupt 机制实现。在编译图时指定 interrupt_before 或 interrupt_after ，系统会在指定节点前/后暂停执行，等待人工输入后继续 [1] 。
+ HITL 触发条件
+ 触发场景
+ 触发条件
+ 审批内容
+ 敏感工具调用
+ 工具名称在敏感工具清单中（如删除数据、发送邮件、资金操作）
+ 工具调用参数 + 预期影响
+ 高成本操作
+ 预估 Token 消耗超过阈值（如 10000 tokens）
+ 操作摘要 + 成本预估
+ 不可逆操作
+ 工具标注 irreversible=True 
+ 操作详情 + 风险说明
+ 跨系统写入
+ 调用 ERP/CRM 的写入接口
+ 写入目标 + 数据内容
+ HITL 实现规范
+ # 在编译时声明中断点
+app = graph.compile(
+ checkpointer=checkpointer,
+ interrupt_before=["hitl_review"],
+)
+# 运行时：执行到 hitl_review 节点前自动暂停
+config = {"configurable": {"thread_id": "session-123"}}
+result = app.invoke(initial_state, config)
+# 此时执行已暂停，状态已持久化
+# 等待人工审批...
+# 人工审批后恢复执行
+# 方式 1：批准继续
+app.invoke(None, config) # 传入 None 表示从断点继续
+# 方式 2：修改状态后继续
+app.update_state(config, {"approved": True, "reviewer": "admin"})
+app.invoke(None, config) 
+ 5.5 异常处理与恢复
+ 异常分类与处理策略
+ 异常类型
+ 示例
+ 处理策略
+ 重试次数
+ LLM 调用超时
+ OpenAI API timeout
+ 指数退避重试（1s → 2s → 4s），切换备用 Provider
+ 3
+ 工具调用失败
+ MCP Server 返回错误
+ 重试 → 跳过并记录 → 降级到备选工具
+ 2
+ 状态序列化错误
+ State 中包含不可序列化对象
+ 记录错误 → 标记 status="failed" → 通知运维
+ 0
+ Agent 无限循环
+ ReAct 循环超过 25 次仍未收敛
+ 强制终止 → 返回当前最佳结果 → 记录异常
+ 0
+ 超时与熔断
+ 单节点超时 120 秒（Agent 推理节点）、30 秒（函数节点）、60 秒（工具调用节点） 
+ 工作流总超时 1800 秒（30 分钟），超时后标记 status="timeout" 
+ Agent 循环上限 25 次（ReAct 循环），超过后强制终止 
+ 熔断阈值 同一 MCP Server 连续 5 次失败 → 熔断 60 秒 → 半开探测 
+ 并发限制 每个 thread 同时只允许一个节点执行，防止状态竞争 
+ 06 智能体执行层 — LangChain + DeepAgent
+ 智能体执行层承载 Agent 的推理、规划、任务拆解、工具调用和 Sub-Agent 协同。这一层由 LangChain 提供 Agent 基础抽象（Tool、Chain、Memory），由 langchain-mcp-adapters 提供 MCP 工具接入，在需要长任务自主执行时叠加 DeepAgent 的规划与文件系统能力。
+ 6.1 智能体架构
+ 智能体采用分层架构。从外到内依次为：调度层、规划层、执行层、工具层。每层有明确的输入输出接口。
+ 工具层
+ 执行层
+ 规划层
+ 调度层
+ 委派子任务
+ 调用
+ 调用
+ Supervisor Agent
+任务分发 · 结果汇总
+ 意图识别
+LLM Router
+ 任务拆解
+HTN + ReAct
+ ReAct Agent
+推理-行动-观察循环
+ Sub-Agent
+上下文隔离的子任务
+ MCP 工具集
+业务系统 · 数据库 · API
+ RAG 工具
+知识库检索
+ 图 6-1：智能体分层架构 
+ Agent 类型定义
+ Agent 类型
+ 职责
+ LLM 模型
+ 工具集
+ Supervisor Agent
+ 接收用户请求，分解为子任务，委派给专家 Agent，汇总结果
+ GPT-4o / Claude Sonnet
+ 任务管理工具（创建子任务、查询状态）
+ RAG Agent
+ 知识库检索与问答
+ GPT-4o-mini / Claude Haiku
+ LlamaIndex 检索工具、向量查询工具
+ Business Agent
+ 业务系统操作（CRM/ERP/OA）
+ GPT-4o / Claude Sonnet
+ MCP 业务系统工具集
+ Analysis Agent
+ 数据分析与报表生成
+ GPT-4o / Claude Sonnet
+ SQL 查询工具、Python 执行工具、图表工具
+ Deep Agent（可选）
+ 长周期自主任务（深度研究、多步推理）
+ Claude Sonnet / Opus
+ 文件系统、全量 MCP 工具集、子 Agent
+ 6.2 规划与意图识别
+ 意图识别
+ 意图识别通过 LLM Router 实现。系统维护一个意图分类清单，每次用户请求经过 LLM 分类后路由到对应的工作流或 Agent [1] 。
+ 意图识别的 Prompt 模板：
+ INTENT_PROMPT = """你是一个意图识别器。根据用户输入，判断其属于以下哪个意图类别：
+1. knowledge_query — 知识问答（查找文档、流程规范、FAQ）
+2. data_analysis — 数据分析（查询数据、生成报表、趋势分析）
+3. business_operation — 业务操作（创建工单、更新CRM、发送通知）
+4. multi_step_task — 复杂任务（需要多步骤、多Agent协作）
+用户输入: {user_input}
+请只返回意图类别名称，不要返回其他内容。
+""" 
+ 任务规划
+ 规划模块采用 HTN（分层任务网络）与 ReAct 的混合模式。HTN 负责确定性任务拆解，ReAct 负责动态推理。规划结果是一个有序的任务列表，每个任务包含：任务 ID、描述、负责 Agent、所需工具、依赖关系。
+ 当 DeepAgent 启用时，规划通过 TodoListMiddleware 实现：LLM 被强制将计划分解为显式步骤写入上下文，在 50-100 步工具调用轨迹上保持连贯性 [4] 。
+ from langchain.agents import create_react_agent
+def create_planning_agent(llm, tools):
+ """创建规划 Agent，负责任务拆解"""
+ prompt = """你是一个任务规划器。接收用户的复杂请求，
+ 将其分解为有序的子任务列表。
+ 每个子任务包含:
+ - task_id: 唯一标识
+ - description: 任务描述
+ - agent_type: 执行该任务的 Agent 类型
+ - required_tools: 所需工具列表
+ - depends_on: 依赖的前置任务 ID 列表
+ 返回 JSON 格式的任务列表。
+ """
+ return create_react_agent(llm=llm, tools=tools, prompt=prompt) 
+ 6.3 任务拆解
+ 任务拆解的输出是一个 DAG（有向无环图），描述子任务之间的依赖关系。Supervisor Agent 根据 DAG 调度子任务：无依赖的任务并行执行，有依赖的任务按序执行。
+ T1: 意图识别
+ T2: 检索知识库
+ T3: 查询CRM数据
+ T4: 查询ERP数据
+ T5: 综合分析
+ T6: 生成报告
+ T7: 发送通知
+ 图 6-2：任务拆解 DAG 示例 
+ 任务拆解规范
+ 最大深度 3 层（Supervisor → Expert Agent → Sub-Agent），防止无限嵌套 
+ 最大并行度 同一层级最多 5 个子任务并行执行 
+ 单任务超时 120 秒，超时后标记失败并通知 Supervisor 
+ 回退策略 子任务失败时，Supervisor 可以选择：重试、降级执行、跳过并标记、终止整个工作流 
+ 结果汇总 Supervisor 收集所有子任务结果后，通过 LLM 合成最终输出 
+ 6.4 工具调用与 MCP 集成
+ 工具调用通过 langchain-mcp-adapters 实现。该适配器将 MCP Server 暴露的工具转换为 LangChain Tool 对象，Agent 可以像使用内置工具一样调用 MCP 工具 [3] 。
+ MCP 客户端配置
+ from langchain_mcp_adapters.client import MultiServerMCPClient
+import asyncio
+# 配置多个 MCP Server 连接
+mcp_config = {
+ "crm_server": {
+ "command": "python",
+ "args": ["-m", "mcp_servers.crm"],
+ "transport": "stdio"
+ },
+ "erp_server": {
+ "url": "http://erp-mcp:8080/mcp",
+ "transport": "streamable_http"
+ },
+ "knowledge_server": {
+ "url": "http://llamaindex-mcp:8081/mcp",
+ "transport": "streamable_http"
+ }
+}
+async def get_agent_tools():
+ """初始化 MCP 客户端并获取所有可用工具"""
+ client = MultiServerMCPClient(mcp_config)
+ tools = await client.get_tools()
+ # tools 是标准的 LangChain Tool 列表
+ # 每个工具有 name, description, args_schema
+ return tools 
+ 工具调用安全控制
+ 安全层
+ 检查内容
+ 执行时机
+ 权限校验
+ 当前 Agent 是否有权限调用该工具
+ 工具调用前
+ 参数校验
+ 工具参数是否符合 schema 定义
+ 工具调用前
+ 敏感操作拦截
+ 工具是否在敏感工具清单中
+ 工具调用前（触发 HITL）
+ 沙箱执行
+ 代码执行类工具在隔离沙箱中运行
+ 工具执行时
+ 审计记录
+ 工具名称、输入参数、输出结果、执行时间
+ 工具执行后
+ 6.5 Sub-Agent 协同
+ Sub-Agent 协同采用 Supervisor 模式。主控 Agent（Supervisor）接收任务后，将子任务委派给专家 Agent，在隔离的上下文中执行 [10] 。
+ 委派
+ 委派
+ 委派
+ 结果回传
+ 结果回传
+ 结果回传
+ 用户请求
+ Supervisor Agent
+ RAG Agent
+知识检索
+ Business Agent
+CRM/ERP 操作
+ Analysis Agent
+数据分析
+ 汇总输出
+ 图 6-3：Supervisor 多 Agent 协同模式 
+ Supervisor 模式实现
+ Supervisor 模式通过 LangGraph 的多 Agent 图实现。Supervisor 作为路由节点，根据任务类型将执行分发到对应的专家 Agent 节点：
+ from langgraph.graph import StateGraph, END
+# Supervisor 决定下一步调用哪个 Agent
+def supervisor_route(state):
+ """根据当前状态决定委派给哪个 Agent"""
+ next_agent = state.get("next_agent", "")
+ if next_agent == "FINISH":
+ return END
+ return next_agent
+# 构建多 Agent 工作流
+workflow = StateGraph(WorkflowState)
+workflow.add_node("supervisor", supervisor_agent)
+workflow.add_node("rag_agent", rag_agent_node)
+workflow.add_node("business_agent", business_agent_node)
+workflow.add_node("analysis_agent", analysis_agent_node)
+# Supervisor → 各 Agent → Supervisor 循环
+workflow.add_conditional_edges("supervisor", supervisor_route, {
+ "rag_agent": "rag_agent",
+ "business_agent": "business_agent",
+ "analysis_agent": "analysis_agent",
+ END: END
+})
+for agent in ["rag_agent", "business_agent", "analysis_agent"]:
+ workflow.add_edge(agent, "supervisor")
+workflow.set_entry_point("supervisor")
+app = workflow.compile(checkpointer=checkpointer) 
+ 上下文隔离
+ Sub-Agent 在独立的上下文中执行，主 Agent 的上下文不会被子 Agent 的工具调用记录淹没。上下文隔离通过以下机制实现：
+ 每个 Sub-Agent 有独立的 messages 列表，不共享 Supervisor 的完整对话历史
+ Sub-Agent 执行完成后，只向 Supervisor 返回最终结果（summary），不返回中间步骤
+ DeepAgent 的 SubAgentMiddleware 实现了类似机制：通过 task 工具委派，子 Agent 的 20+ 次工具调用不会淹没主 Agent 上下文 [4] 
+ 6.6 Agent 生命周期
+ Agent 生命周期分为五个阶段：注册、发现、调度、执行、回收。每个阶段的状态转换如下：
+ Agent 定义注册到 Agent Registry
+ 工作流编排层查询可用 Agent
+ Supervisor 将任务委派给 Agent
+ Agent 开始执行任务
+ 任务执行成功
+ 执行失败
+ 触发 HITL 等待审批
+ 审批通过，恢复执行
+ 审批拒绝
+ 结果回传给 Supervisor
+ 错误信息回传给 Supervisor
+ Registered
+ Discovered
+ Scheduled
+ Executing
+ Completed
+ Failed
+ Paused
+ 图 6-4：Agent 生命周期状态转换 
+ Agent Registry 设计
+ Agent Registry 是 Agent 注册与发现的核心组件。它维护所有可用 Agent 的元数据，支持工作流编排层按需查询和调度：
+ 字段
+ 类型
+ 说明
+ agent_id
+ UUID
+ Agent 唯一标识
+ name
+ str
+ Agent 名称（如 "CRM 操作 Agent"）
+ agent_type
+ str
+ 类型（supervisor / rag / business / analysis / deep）
+ llm_config
+ dict
+ LLM Provider 与模型配置
+ tools
+ list[str]
+ 绑定的 MCP 工具名称列表
+ system_prompt
+ str
+ Agent 系统提示词
+ max_iterations
+ int
+ 最大 ReAct 循环次数（默认 25）
+ timeout
+ int
+ 单次执行超时秒数（默认 120）
+ status
+ str
+ 当前状态（registered / executing / paused / completed / failed）
+ tenant_id
+ str
+ 租户隔离标识
+ Agent Registry 接口规范
+ class AgentRegistry:
+ """Agent 注册中心，支持注册、发现、调度"""
+ def register(self, agent_config: dict) -> str:
+ """注册 Agent，返回 agent_id"""
+ def discover(self, agent_type: str = None,
+ tenant_id: str = None) -> list[dict]:
+ """发现可用 Agent，支持按类型和租户过滤"""
+ def get_agent(self, agent_id: str) -> dict:
+ """获取 Agent 详细配置"""
+ def update_status(self, agent_id: str, status: str):
+ """更新 Agent 运行状态"""
+ def deregister(self, agent_id: str):
+ """注销 Agent""" 
+ 07 MCP 统一协议层
+ MCP 统一协议层是连接智能体与企业业务系统的桥梁。MCP（Model Context Protocol）自 2024 年 11 月由 Anthropic 开源以来，到 2026 年已成为事实标准，所有主流 AI 框架均已支持 [5] 。MCP 的核心价值在于「一次开发，多 Agent 复用」——企业将 CRM、ERP、OA 等系统封装为 MCP Server，无需为每个 Agent 重复开发集成代码。
+ 7.1 MCP Server 架构
+ 每个 MCP Server 封装一个或多个业务系统，将其 API 暴露为标准化的 MCP 工具。MCP Server 的内部架构如下：
+ 业务系统后端
+ MCP Server 集群
+ MCP 网关
+ MCP 客户端（Agent 侧）
+ JSON-RPC
+ LangChain Agent
+ langchain-mcp-adapters
+MultiServerMCPClient
+ 认证中间件
+Token 校验 · 租户隔离
+ 工具路由
+工具发现 · 参数校验
+ 审计记录
+调用日志 · 输入输出
+ CRM MCP Server
+客户 · 商机 · 合同
+ ERP MCP Server
+订单 · 库存 · 财务
+ OA MCP Server
+审批 · 流程 · 通知
+ Knowledge MCP Server
+LlamaIndex RAG
+ Salesforce / CRM API
+ SAP / ERP API
+ OA / 飞书 API
+ 图 7-1：MCP Server 架构 
+ MCP Server 模板规范
+ 每个 MCP Server 遵循统一的实现模板，确保工具定义、错误处理、审计日志的一致性：
+ from mcp.server import Server, NotificationOptions
+from mcp.server.models import InitializationOptions
+import mcp.types as types
+class CRMMcpServer:
+ """CRM 系统 MCP Server 模板"""
+ def __init__(self, crm_client):
+ self.server = Server("crm-server")
+ self.crm = crm_client
+ self._register_tools()
+ def _register_tools(self):
+ @self.server.list_tools()
+ async def list_tools() -> list[types.Tool]:
+ return [
+ types.Tool(
+ name="search_customers",
+ description="搜索客户信息，支持按名称、行业、地区筛选",
+ inputSchema={
+ "type": "object",
+ "properties": {
+ "keyword": {"type": "string",
+ "description": "搜索关键词"},
+ "industry": {"type": "string",
+ "description": "行业筛选"},
+ "limit": {"type": "integer",
+ "default": 10}
+ },
+ "required": ["keyword"]
+ }
+ ),
+ types.Tool(
+ name="create_opportunity",
+ description="创建销售商机（敏感操作，需审批）",
+ inputSchema={
+ "type": "object",
+ "properties": {
+ "customer_id": {"type": "string"},
+ "amount": {"type": "number"},
+ "stage": {"type": "string"}
+ },
+ "required": ["customer_id", "amount"]
+ },
+ # 自定义元数据：标记为敏感操作
+ annotations={"sensitive": True,
+ "irreversible": False}
+ )
+ ]
+ @self.server.call_tool()
+ async def call_tool(name: str, arguments: dict) -> list:
+ # 审计日志记录
+ logger.info(f"MCP call: {name}, args: {arguments}")
+ if name == "search_customers":
+ result = await self.crm.search(**arguments)
+ return [types.TextContent(
+ type="text", text=json.dumps(result))]
+ elif name == "create_opportunity":
+ # 敏感操作：HITL 已在上层拦截
+ result = await self.crm.create_opp(**arguments)
+ return [types.TextContent(
+ type="text", text=json.dumps(result))] 
+ 7.2 企业系统封装规范
+ 每个企业系统封装为独立的 MCP Server，遵循以下封装规范：
+ 业务系统
+ 暴露工具
+ 传输方式
+ 敏感操作
+ CRM（Salesforce/自研）
+ search_customers, get_customer_detail, create_opportunity, update_contact
+ Streamable HTTP
+ create_opportunity, update_contact
+ ERP（SAP/自研）
+ query_orders, check_inventory, get_financial_report, create_order
+ Streamable HTTP
+ create_order
+ OA（飞书/钉钉）
+ search_docs, create_approval, send_notification, get_user_info
+ Streamable HTTP
+ create_approval, send_notification
+ 知识库（LlamaIndex）
+ rag_search, rag_query_rewrite, get_document, list_sources
+ Streamable HTTP（workflow_as_mcp）
+ 无（只读）
+ 数据库（PostgreSQL）
+ execute_sql（只读）, list_tables, describe_table
+ stdio / HTTP
+ 无（只读）
+ 工具定义规范
+ 每个 MCP 工具的定义必须包含以下字段：
+ name 工具唯一标识，格式 system_action （如 crm_search_customers ） 
+ description 自然语言描述，供 LLM 理解工具用途。需包含输入条件、输出格式、限制说明 
+ inputSchema JSON Schema 格式的参数定义，包含字段类型、必填项、默认值、枚举值 
+ annotations 自定义元数据： sensitive （敏感操作）、 irreversible （不可逆操作）、 cost_estimate （预估成本） 
+ 7.3 工具发现与注册
+ 工具发现采用动态注册模式。MCP 客户端在初始化时连接所有配置的 MCP Server，通过 list_tools 请求获取可用工具列表。Agent 在运行时看到的是所有 MCP Server 工具的合集 [5] 。
+ 工具发现流程
+ Knowledge MCP Server ERP MCP Server CRM MCP Server MCP Adapter LangChain Agent Knowledge MCP Server ERP MCP Server CRM MCP Server MCP Adapter LangChain Agent Agent 将 6 个工具 注入 LLM 的可用工具集 初始化 MultiServerMCPClient list_tools() [search_customers, create_opportunity] list_tools() [query_orders, create_order] list_tools() [rag_search, get_document] 合并工具列表 (6 个工具) 调用 crm_search_customers call_tool("search_customers", args) 搜索结果 JSON 工具调用结果 
+ 图 7-2：MCP 工具发现与调用时序 
+ 工具缓存与失效
+ 工具列表在 MCP 客户端初始化后缓存。当 MCP Server 的工具列表变更时（如新增工具、修改 schema），通过以下机制感知变更：
+ TTL 刷新 ：每 5 分钟重新调用 list_tools 刷新缓存
+ 手动触发 ：管理端通过 API 触发指定 Agent 的工具列表刷新
+ 版本号对比 ：MCP Server 在 list_tools 响应中返回版本号，客户端对比版本号决定是否刷新
+ 7.4 安全与权限
+ 工具权限矩阵
+ 每个 Agent 只能访问其被授权的工具子集。权限矩阵定义了 Agent 类型与工具的映射关系：
+ Agent 类型
+ CRM 工具
+ ERP 工具
+ OA 工具
+ 知识库工具
+ 数据库工具
+ Supervisor
+ 只读
+ 只读
+ 只读
+ 读写
+ 只读
+ RAG Agent
+ —
+ —
+ —
+ 读写
+ —
+ Business Agent
+ 读写
+ 读写
+ 读写
+ 只读
+ 只读
+ Analysis Agent
+ 只读
+ 只读
+ —
+ 只读
+ 只读
+ 认证机制
+ MCP 客户端通过自定义认证中间件实现用户级工具隔离 [6] 。每个工具调用请求携带用户 Token，MCP 网关在路由前校验 Token 的权限范围：
+ # LangGraph Agent Server 的自定义认证中间件
+from langgraph_api.auth import AsyncAuthMiddleware
+async def auth_middleware(request):
+ """从请求头提取用户 Token，注入工具上下文"""
+ token = request.headers.get("Authorization", "")
+ user = await verify_token(token)
+ # 将用户上下文注入到 MCP 工具调用中
+ # 实现多租户场景下的工具隔离
+ request.state.user = user
+ request.state.tenant_id = user.tenant_id
+ return request 
+ 审计日志规范
+ 所有 MCP 工具调用必须记录审计日志，日志包含以下字段，写入后不可篡改：
+ 字段
+ 说明
+ log_id
+ 日志唯一标识（UUID）
+ timestamp
+ 调用时间（UTC，毫秒精度）
+ agent_id
+ 调用方 Agent ID
+ user_id
+ 发起用户 ID
+ tenant_id
+ 租户 ID
+ tool_name
+ 工具名称
+ input_args
+ 输入参数（JSON，敏感字段脱敏）
+ output_result
+ 输出结果（JSON，截断至 4KB）
+ duration_ms
+ 执行耗时（毫秒）
+ status
+ success / failed / denied
+ error_message
+ 失败时的错误信息
+ 08 数据与知识底座层
+ 数据与知识底座层是整个基座的数据基础设施，由四个组件构成：LlamaIndex（知识库与 RAG）、PostgreSQL（状态持久化）、Milvus（向量检索）、Neo4j（知识图谱）、Redis（短期记忆）。这一层的设计目标是让 Agent 能够高效检索知识、持久化状态、管理记忆。
+ 8.1 知识库管理
+ 知识库管理基于 LlamaIndex 构建，负责企业文档的接入、索引构建、检索增强。LlamaIndex 可以通过 workflow_as_mcp 将 RAG 管道暴露为 MCP Server，供所有 Agent 调用 [5] 。
+ 文档接入管道
+ 文档从接入到可检索需要经过五个阶段：
+ 文档接入
+API · 邮件 · 飞书
+ 文档解析
+PDF · Word · HTML
+ 文本分割
+Recursive · Semantic
+ 向量化
+Embedding Model
+ 索引构建
+Milvus · 关键词索引
+ 可检索
+Agent 查询
+ 图 8-1：文档接入与索引构建管道 
+ 文本分割策略
+ 策略
+ 适用场景
+ 参数
+ Recursive Character
+ 通用文档（PDF、Word）
+ chunk_size=512, chunk_overlap=64
+ Semantic Chunking
+ 技术文档、规范文档
+ 基于语义相似度自动分割，无固定 size
+ Sentence Window
+ FAQ、知识条目
+ 单句为 chunk，检索时返回上下文窗口
+ Hierarchical
+ 长文档（手册、报告）
+ 父子节点两层索引，摘要 + 原文
+ Agentic RAG 设计
+ Agentic RAG 与传统 RAG 的区别在于：Agent 自主决定检索策略、查询重写、多轮检索。Agent 不是被动地接收检索结果，而是主动判断是否需要检索、检索什么、是否需要二次检索 [13] 。
+ from llama_index.core import VectorStoreIndex
+from llama_index.tools.workflow_as_mcp import workflow_as_mcp
+# 构建 Agentic RAG 工作流
+def build_rag_workflow(doc_store, vector_index):
+ @workflow_as_mcp
+ async def rag_search(query: str, **kwargs):
+ """Agent 可调用的 RAG 工具
+ Agent 可以：
+ 1. 直接检索
+ 2. 先重写查询再检索
+ 3. 多次检索后合并结果
+ 4. 检索不到时回退到关键词搜索
+ """
+ # 查询重写
+ rewritten = await query_rewriter.arewrite(query)
+ # 向量检索
+ results = await vector_index.asearch(
+ rewritten, similarity_top_k=5
+ )
+ # 如果结果不足，回退到关键词检索
+ if len(results) < 2:
+ keyword_results = await doc_store.keyword_search(query)
+ results.extend(keyword_results)
+ # 去重与排序
+ return deduplicate_and_rank(results)
+ return rag_search 
+ 8.2 三层记忆体系
+ LLM 的上下文窗口有限，无法将所有历史信息塞入单个 prompt。三层记忆体系解决了短期上下文、长期记忆、语义知识三个层面的需求 [13] 。
+ 读写
+ 检索
+ 查询
+ 语义知识记忆 — Neo4j
+ 业务实体关系
+ 规则约束
+ 组织架构
+ 长期情景记忆 — Milvus
+ 跨会话历史
+ 用户偏好
+ 时间衰减算法
+ 短期工作记忆 — Redis
+ 会话上下文
+ 当前任务状态
+ TTL: 30 分钟
+ Agent 推理
+ 图 8-2：三层记忆体系架构 
+ 短期工作记忆（Redis）
+ 存储内容 当前会话的消息列表、当前工作流的状态快照、Agent 的临时变量 
+ TTL 30 分钟，活跃会话自动续期，超时后自动清理 
+ 隔离 按 thread_id 和 tenant_id 隔离，不同会话互不干扰 
+ 容量限制 单会话最多保留 100 条消息，超出后滚动淘汰最早消息 
+ 数据结构 Redis Hash（会话元数据）+ Redis List（消息列表） 
+ 长期情景记忆（Milvus）
+ 存储内容 跨会话的对话历史摘要、用户偏好与习惯、任务执行历史 
+ 索引方式 向量索引（HNSW），embedding 维度 1536（OpenAI text-embedding-3-small） 
+ 租户隔离 Milvus partition 按 tenant_id 隔离，不同租户的数据物理分离 
+ 时间衰减 检索结果按时间衰减加权：score = similarity × 0.9^(days_since) 
+ 写入触发 会话结束时自动将摘要写入；Agent 主动调用记忆工具写入 
+ 语义知识记忆（Neo4j）
+ 存储内容 业务实体关系图（客户-商机-合同-产品）、业务规则约束、组织架构 
+ 查询语言 Cypher，通过 MCP 工具暴露为 graph_query 工具 
+ 更新方式 管理端手动维护 + Agent 通过工具自动发现关系并写入 
+ 用途 弥补向量检索的不足，回答关系型查询（如「这个客户关联了哪些合同」） 
+ 8.3 LlamaIndex 集成
+ LlamaIndex 作为知识库层的核心组件，通过两种方式与 Agent 集成：
+ 集成方式
+ 说明
+ 适用场景
+ 进程内调用
+ LlamaIndex Workflow 作为 Python 库直接在 Agent 节点中调用
+ 单机部署，低延迟场景
+ MCP 暴露
+ 通过 workflow_as_mcp 将 RAG 管道暴露为 MCP Server，Agent 通过 MCP 协议调用
+ 分布式部署，跨框架复用
+ 向量数据库配置
+ # Milvus 配置
+from pymilvus import connections, Collection, utility
+connections.connect(
+ host="milvus",
+ port="19530",
+ user="agent_platform",
+ password="...",
+ secure=True
+)
+# Collection 设计
+collection_schema = {
+ "fields": [
+ {"name": "id", "type": "INT64", "is_primary": True},
+ {"name": "embedding", "type": "FLOAT_VECTOR", "params": {"dim": 1536}},
+ {"name": "text", "type": "VARCHAR", "params": {"max_length": 8192}},
+ {"name": "doc_id", "type": "VARCHAR", "params": {"max_length": 64}},
+ {"name": "tenant_id", "type": "VARCHAR", "params": {"max_length": 64}},
+ {"name": "timestamp", "type": "INT64"} # 用于时间衰减
+ ],
+ "index": {
+ "field": "embedding",
+ "type": "HNSW",
+ "params": {"M": 16, "efConstruction": 256}
+ }
+} 
+ 09 横切关注点
+ 横切关注点贯穿四层架构的所有组件，不隶属于任何单一层级，但决定了平台能否进入生产环境。本章定义可观测性、安全合规、成本控制三个维度的设计与实现规范。
+ 9.1 可观测性
+ 智能体平台的可观测性比传统应用更复杂，因为 Agent 的执行路径是非确定性的——同一个输入可能走完全不同的工具调用链。传统日志只能记录"发生了什么"，无法回答"为什么走这条路"。本平台采用 LangSmith + OpenTelemetry 双轨方案，前者负责 LLM 语义层追踪，后者负责基础设施层指标 [14] 。
+ 追踪分层模型
+ 层级
+ 追踪工具
+ 核心指标
+ 告警阈值
+ Workflow 层
+ LangSmith Trace
+ 节点执行耗时、状态变更、分支命中率
+ 单节点 > 30s
+ Agent 层
+ LangSmith Trace
+ 规划轮次、工具调用次数、token 消耗
+ 规划轮次 > 10
+ Tool / MCP 层
+ OpenTelemetry
+ 工具调用延迟、错误率、超时率
+ 错误率 > 5%
+ 基础设施层
+ OpenTelemetry + Prometheus
+ CPU、内存、GPU 利用率、队列深度
+ GPU 利用率 > 85%
+ LangSmith 集成配置
+ LangSmith 通过环境变量自动接入，无需侵入业务代码。所有 LangChain 和 LangGraph 的调用会自动上报到 LangSmith 平台。
+ # 环境变量配置
+export LANGSMITH_TRACING=true
+export LANGSMITH_API_KEY="ls__xxxxx"
+export LANGSMITH_PROJECT="agent-platform-prod"
+# LangGraph 编译时启用 tracing
+from langgraph.graph import StateGraph
+graph = builder.compile(
+ checkpointer=postgres_checkpointer,
+ interrupt_before=["human_review"],
+ # LangSmith 自动追踪所有节点执行
+)
+# 运行时附加 metadata，便于在 LangSmith 中筛选
+config = {
+ "configurable": {
+ "thread_id": thread_id,
+ "tenant_id": tenant_id,
+ },
+ "metadata": {
+ "workflow_name": "contract_review",
+ "user_id": user_id,
+ "session_id": session_id,
+ }
+}
+result = await graph.ainvoke(initial_state, config=config) 
+ OpenTelemetry 基础设施追踪
+ 对于 MCP Server、数据库连接、外部 API 调用等非 LLM 组件，使用 OpenTelemetry 进行分布式追踪。两套追踪系统通过 trace_id 关联，可以在 LangSmith 中点击某个 Agent 执行，直接跳转到对应的 OTel trace 查看基础设施耗时 [15] 。
+ # OpenTelemetry 初始化
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+ OTLPSpanExporter
+)
+provider = TracerProvider()
+provider.add_span_processor(
+ BatchSpanProcessor(
+ OTLPSpanExporter(endpoint="http://otel-collector:4317")
+ )
+)
+trace.set_tracer_provider(provider)
+# MCP Server 工具调用追踪
+tracer = trace.get_tracer("mcp-server")
+@tracer.start_as_current_span("tool.execute")
+async def execute_tool(tool_name: str, arguments: dict):
+ span = trace.get_current_span()
+ span.set_attribute("tool.name", tool_name)
+ span.set_attribute("tool.args_size", len(str(arguments)))
+ # 执行工具并记录结果状态
+ result = await tool_dispatcher.dispatch(tool_name, arguments)
+ span.set_attribute("tool.success", result.success)
+ return result 
+ 指标层 (Prometheus + Grafana)
+ 基础设施追踪层 (OpenTelemetry)
+ 语义追踪层 (LangSmith)
+ Workflow Trace
+ Agent Trace
+ LLM Call Span
+ Tool Call Span
+ MCP Server Span
+ DB Query Span
+ External API Span
+ DB Latency Metric
+ API Error Rate Metric
+ Token Usage Metric
+ 图 9-1：双轨追踪关联模型 
+ 关键监控仪表盘
+ Grafana 仪表盘需要覆盖以下核心视图，每个视图对应一类运维决策：
+ 仪表盘
+ 数据源
+ 核心面板
+ 平台总览
+ Prometheus
+ QPS、P50/P95/P99 延迟、错误率、活跃 Workflow 数
+ Agent 执行
+ LangSmith API
+ 平均规划轮次、工具调用分布、成功率趋势
+ Token 消耗
+ LangSmith + 自建计量
+ 按租户/模型/工作流的 token 消耗排行
+ 知识库健康
+ Milvus + LlamaIndex
+ 检索延迟、召回率、索引文档数变化
+ MCP 工具
+ OpenTelemetry
+ 各工具调用次数、错误率、平均延迟
+ 9.2 安全与合规
+ 智能体平台的安全边界与传统应用不同。Agent 可以自主调用工具、访问业务系统、执行写操作，一旦 prompt 被注入或 Agent 规划被劫持，可能直接造成业务数据泄露或破坏。安全设计遵循"最小权限 + 分层防护 + 审计留痕"三个原则 [15] 。
+ 安全防护分层
+ 数据层安全
+ 向量库行级过滤
+tenant_id 隔离
+ 审计日志
+全链路记录
+ 执行层安全
+ 工具白名单
+按 Agent 角色限定
+ Output Guard
+敏感信息脱敏
+ 编排层安全
+ Input Guard
+Prompt 注入检测
+ Policy Engine
+工作流权限校验
+ 接入层安全
+ API 网关
+认证 · 限流
+ 租户隔离
+Tenant ID 注入
+ 图 9-2：四层安全防护模型 
+ Prompt 注入防护
+ Agent 接收的外部输入（用户消息、检索到的文档片段、工具返回结果）都可能包含恶意指令。Input Guard 在消息进入 Agent 之前进行检测，Output Guard 在 Agent 返回结果之前进行过滤。
+ # Input Guard：检测 prompt 注入
+from langchain_core.guardrails import BaseGuardrail
+class PromptInjectionGuard(BaseGuardrail):
+ """检测用户输入中的 prompt 注入攻击"""
+ INJECTION_PATTERNS = [
+ "ignore previous instructions",
+ "你是一个新的 AI",
+ "system:",
+ "忽略以上所有内容",
+ "<\\/template>",
+ ]
+ async def avalidate(self, input_text: str) -> bool:
+ text_lower = input_text.lower()
+ for pattern in self.INJECTION_PATTERNS:
+ if pattern.lower() in text_lower:
+ return False # 拦截
+ # 调用专门的分类模型进行二次检测
+ is_safe = await self.classifier.predict(input_text)
+ return is_safe
+# Output Guard：敏感信息脱敏
+class PiiRedactionGuard(BaseGuardrail):
+ """对 Agent 输出中的 PII 信息进行脱敏"""
+ PII_PATTERNS = {
+ "phone": r"\d{11}",
+ "id_card": r"\d{17}[\dXx]",
+ "email": r"[\w.-]+@[\w.-]+\.\w+",
+ }
+ async def avalidate(self, output_text: str) -> str:
+ for pii_type, pattern in self.PII_PATTERNS.items():
+ output_text = re.sub(
+ pattern, f"[REDACTED_{pii_type}]", output_text
+ )
+ return output_text 
+ 工具调用权限控制
+ 每个 Agent 在创建时绑定一个角色（role），角色决定了该 Agent 可以调用的 MCP 工具集合。工具白名单在 Agent 编译时注入，运行时无法动态绕过。
+ Agent 角色
+ 可调用工具
+ 禁止调用
+ 合同审查 Agent
+ rag_search、doc_extract、compare_clauses
+ send_email、delete_record、exec_sql
+ 数据分析 Agent
+ rag_search、query_db_readonly、chart_generate
+ write_db、send_email、exec_shell
+ 客户服务 Agent
+ rag_search、query_order、create_ticket
+ exec_sql、delete_record、exec_shell
+ 管理 Agent（Supervisor）
+ delegate_to_subagent、rag_search
+ 直接调用业务系统工具
+ 审计日志规范
+ 所有 Agent 的工具调用、工作流状态变更、人工审批操作必须记录审计日志。审计日志写入独立的 PostgreSQL 数据库，与业务数据隔离，只允许追加不允许修改。
+ # 审计日志结构
+audit_record = {
+ "event_id": uuid4(),
+ "timestamp": datetime.utcnow().isoformat(),
+ "tenant_id": tenant_id,
+ "user_id": user_id,
+ "workflow_id": workflow_id,
+ "thread_id": thread_id,
+ "event_type": "tool_call", # tool_call / state_change / human_review / agent_decision
+ "actor": "contract_review_agent",
+ "action": "rag_search",
+ "input_hash": sha256(input_data),
+ "output_hash": sha256(output_data),
+ "result_status": "success", # success / failure / blocked
+ "duration_ms": elapsed_ms,
+ "metadata": {
+ "tool_name": "rag_search",
+ "tokens_used": 1523,
+ }
+}
+# 写入审计库（只追加，不可修改）
+await audit_db.insert(audit_record) 
+ 合规要求 
+ 审计日志保留期限不少于 180 天，支持按租户、时间范围、事件类型检索。涉及个人数据处理的行为需满足 GDPR / 《个人信息保护法》要求，包括数据主体权利响应、数据处理影响评估（DPIA）。
+ 9.3 成本控制
+ LLM 调用是平台最大的可变成本。一个复杂工作流可能触发数十次 LLM 调用，每次调用消耗数千到数万 token。如果不做成本控制，单次工作流执行成本可能从几元飙升到几十元。成本控制从模型路由、token 预算、缓存三个层面切入。
+ 模型路由策略
+ 并非所有任务都需要最强的模型。根据任务复杂度将请求路由到不同级别的模型，可以在保持质量的前提下降低 60% 以上的推理成本。
+ 任务类型
+ 推荐模型
+ 输入 token 单价
+ 路由条件
+ 意图识别 / 分类
+ GPT-4o-mini / Qwen-Turbo
+ 低
+ 输入 < 500 token，无需复杂推理
+ RAG 检索 / 摘要
+ GPT-4o / Qwen-Plus
+ 中
+ 需要理解上下文，但不需要多步推理
+ Agent 规划 / 任务拆解
+ Claude Sonnet / GPT-4o
+ 高
+ 需要复杂推理、工具选择、多步规划
+ 合同审查 / 法律分析
+ Claude Opus / GPT-4o
+ 最高
+ 高准确率要求，容错率极低
+ # 模型路由器实现
+from langchain_core.language_models import BaseChatModel
+class ModelRouter:
+ """根据任务类型和上下文长度路由到不同模型"""
+ ROUTING_RULES = {
+ "intent_classification": {
+ "model": "gpt-4o-mini",
+ "max_tokens": 100,
+ "condition": lambda ctx: ctx["input_tokens"] < 500
+ },
+ "rag_summary": {
+ "model": "qwen-plus",
+ "max_tokens": 1000,
+ "condition": lambda ctx: True
+ },
+ "agent_planning": {
+ "model": "claude-sonnet",
+ "max_tokens": 4000,
+ "condition": lambda ctx: ctx["tool_count"] > 3
+ },
+ }
+ def route(self, task_type: str, context: dict) -> BaseChatModel:
+ rule = self.ROUTING_RULES.get(task_type)
+ if rule and rule["condition"](context):
+ return self.model_factory.create(rule["model"])
+ # 默认回退到中等模型
+ return self.model_factory.create("gpt-4o") 
+ Token 预算管理
+ 每个工作流执行前分配 token 预算。当实际消耗接近预算上限时，Agent 会收到预警；超过上限时，工作流自动降级或终止。
+ # Token 预算管理器
+class TokenBudgetManager:
+ """管理单个工作流执行的 token 预算"""
+ def __init__(self, total_budget: int):
+ self.total_budget = total_budget
+ self.consumed = 0
+ self.warning_threshold = 0.8 # 80% 预警
+ self.hard_limit = 0.95 # 95% 硬限制
+ def check_before_call(self, estimated_tokens: int) -> str:
+ projected = self.consumed + estimated_tokens
+ ratio = projected / self.total_budget
+ if ratio >= self.hard_limit:
+ return "BLOCK" # 阻止调用，工作流降级
+ elif ratio >= self.warning_threshold:
+ return "WARN" # 允许调用，但通知 Agent 节约
+ else:
+ return "OK"
+ async def record_usage(self, actual_tokens: int):
+ self.consumed += actual_tokens
+ # 写入 Redis 供实时监控
+ await redis.hincrby(
+ f"budget:{workflow_id}", "consumed", actual_tokens
+ ) 
+ 语义缓存
+ 对于高频重复的查询（如 FAQ 检索、标准流程指引），使用语义缓存可以避免重复调用 LLM。语义缓存基于向量相似度匹配，当新查询与缓存中的历史查询相似度超过阈值时，直接返回缓存的回答。
+ 缓存层
+ 存储
+ TTL
+ 命中率预期
+ 适用场景
+ 精确缓存
+ Redis
+ 1 小时
+ 15-25%
+ 完全相同的查询
+ 语义缓存
+ Redis + Milvus
+ 6 小时
+ 30-40%
+ 语义相同、表述不同的查询
+ Embedding 缓存
+ Milvus
+ 7 天
+ 80%+
+ 已索引文档的向量
+ 10 部署架构
+ 部署架构的目标是在 Kubernetes 上实现四层架构的容器化运行，支持水平扩展、故障自愈、灰度发布。所有组件以容器形式部署，通过 Service 暴露，通过 Ingress 统一入口。
+ 10.1 容器编排拓扑
+ Kubernetes 集群
+ 负载均衡层
+ data-ns
+ mcp-ns
+ agent-ns
+ workflow-ns
+ obs-ns
+ LangSmith
+ Self-hosted
+ OTel Collector
+ Prometheus
+ Grafana
+ Ingress Controller
+nginx-ingress
+ Workflow API
+ replicas: 3
+ Workflow Worker
+ replicas: 5
+ Agent Runtime
+ replicas: 6
+ Agent Server
+ replicas: 2
+ MCP Gateway
+ replicas: 3
+ Tool Servers
+ 按工具分组
+ PostgreSQL
+ StatefulSet: 3
+ Redis Cluster
+ 6 nodes
+ Milvus
+ standalone / cluster
+ Neo4j
+ StatefulSet: 3
+ 图 10-1：Kubernetes 部署拓扑 
+ 10.2 组件部署规格
+ 组件
+ 副本数
+ CPU / 副本
+ 内存 / 副本
+ 存储
+ 扩展方式
+ Workflow API
+ 3
+ 2 core
+ 4 GiB
+ —
+ HPA (CPU > 70%)
+ Workflow Worker
+ 5-10
+ 4 core
+ 8 GiB
+ —
+ HPA (队列深度)
+ Agent Runtime
+ 6-12
+ 4 core
+ 8 GiB
+ —
+ HPA (并发 Agent 数)
+ Agent Server
+ 2
+ 2 core
+ 4 GiB
+ —
+ 固定
+ MCP Gateway
+ 3
+ 2 core
+ 4 GiB
+ —
+ HPA (QPS)
+ MCP Tool Server
+ 2-4 / 组
+ 1-2 core
+ 2-4 GiB
+ —
+ 按工具组独立扩缩
+ PostgreSQL
+ 3 (HA)
+ 4 core
+ 16 GiB
+ 500 GiB SSD
+ 读副本扩展
+ Redis Cluster
+ 6 (3主3从)
+ 2 core
+ 8 GiB
+ —
+ 分片扩展
+ Milvus
+ 1 (standalone) / 5+ (cluster)
+ 8 core
+ 32 GiB
+ 1 TiB SSD
+ 分片 + 副本
+ Neo4j
+ 3 (Causal Cluster)
+ 4 core
+ 16 GiB
+ 200 GiB SSD
+ 读副本扩展
+ 10.3 网络与安全策略
+ 各命名空间之间通过 NetworkPolicy 限制访问。核心原则：数据层只允许 agent-ns 和 workflow-ns 访问，obs-ns 只允许被其他命名空间 push 数据，不允许反向访问。
+ # NetworkPolicy：数据层只允许 Agent 和 Workflow 访问
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: data-ns-policy
+ namespace: data-ns
+spec:
+ podSelector: {}
+ policyTypes:
+ - Ingress
+ ingress:
+ - from:
+ - namespaceSelector:
+ matchLabels:
+ name: agent-ns
+ - namespaceSelector:
+ matchLabels:
+ name: workflow-ns
+ ports:
+ - protocol: TCP
+ port: 5432 # PostgreSQL
+ - protocol: TCP
+ port: 6379 # Redis
+ - protocol: TCP
+ port: 19530 # Milvus
+ - protocol: TCP
+ port: 7687 # Neo4j 
+ 10.4 GPU 资源调度
+ 当平台使用本地部署的开源模型（如 Qwen、Llama）进行推理时，需要 GPU 资源调度。推荐使用 NVIDIA GPU Operator + Time-Slicing 或 MIG（Multi-Instance GPU）实现 GPU 共享。
+ 方案
+ 隔离级别
+ 适用场景
+ 资源利用率
+ 独占 GPU
+ 强隔离
+ 高吞吐推理服务
+ 低（单 Pod 独占整卡）
+ GPU Time-Slicing
+ 弱隔离
+ 低延迟、多并发
+ 高（多 Pod 共享）
+ MIG
+ 硬件级隔离
+ 需要强隔离的混合负载
+ 中（按 MIG 实例分配）
+ # GPU Pod 资源声明
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: local-llm-server
+ namespace: agent-ns
+spec:
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: llm-server
+ image: vllm/vllm-openai:latest
+ resources:
+ limits:
+ nvidia.com/gpu: "1" # 请求 1 块 GPU
+ memory: "32Gi"
+ requests:
+ nvidia.com/gpu: "1"
+ memory: "16Gi"
+ env:
+ - name: MODEL_NAME
+ value: "Qwen/Qwen2.5-72B-Instruct"
+ - name: GPU_MEMORY_UTILIZATION
+ value: "0.85"
+ nodeSelector:
+ accelerator: nvidia-a100 
+ 10.5 持久化与备份
+ 数据类型
+ 存储组件
+ 备份策略
+ RPO
+ RTO
+ Workflow 状态 / Checkpoint
+ PostgreSQL
+ WAL 归档 + 每日全量快照
+ 5 分钟
+ 15 分钟
+ 知识库索引
+ Milvus
+ 每日快照到 S3
+ 24 小时
+ 1 小时
+ 知识图谱
+ Neo4j
+ 每日全量备份 + CDC 增量
+ 1 小时
+ 30 分钟
+ 短期记忆 / 缓存
+ Redis
+ RDB 每 6 小时 + AOF
+ 1 秒
+ 5 分钟
+ 审计日志
+ PostgreSQL (独立实例)
+ 每日全量 + WAL 归档到 S3
+ 5 分钟
+ 15 分钟
+ 灾备设计 
+ PostgreSQL 和 Neo4j 的备份需跨可用区（AZ）复制到对象存储。在主集群不可用时，可在备用 AZ 从备份恢复，RTO 控制在 30 分钟以内。Milvus 向量索引支持从 S3 快照重建，重建耗时取决于索引规模，1000 万向量约需 20 分钟。
+ 11 技术栈与版本锁定
+ 版本锁定是生产环境的基本要求。本章列出所有组件的推荐版本，确保实施阶段所有环境一致。版本选择遵循"稳定优先、LTS 优先、生态兼容优先"原则。
+ 11.1 核心框架版本
+ 组件
+ 推荐版本
+ 最低版本
+ 锁定理由
+ Python
+ 3.12.x
+ 3.11
+ asyncio 性能优化，PEP 695 类型语法
+ LangChain
+ 0.3.x
+ 0.3.0
+ LangGraph 0.2+ 依赖 LangChain 0.3
+ LangGraph
+ 0.2.x
+ 0.2.0
+ Checkpointer、Supervisor 模式稳定版
+ LangChain MCP Adapters
+ 0.2.1+
+ 0.2.0
+ MCP 协议适配稳定版 [3] 
+ DeepAgent
+ 0.1.x
+ 0.1.0
+ 规划与子 Agent 协调能力
+ LlamaIndex
+ 0.12.x
+ 0.12.0
+ workflow_as_mcp 支持
+ MCP SDK (Python)
+ 1.0+
+ 1.0.0
+ 协议规范 1.0 对齐
+ LangSmith SDK
+ 0.1.x
+ 0.1.0
+ Tracing 自动接入
+ 11.2 基础设施版本
+ 组件
+ 推荐版本
+ 部署形态
+ 备注
+ Kubernetes
+ 1.29 LTS
+ 托管（EKS / AKS / 自建）
+ 1.29 支持到 2025-02
+ PostgreSQL
+ 16.x
+ StatefulSet + PG Pool
+ pgvector 扩展可选
+ Redis
+ 7.2.x
+ Cluster 模式
+ Stream 用于事件队列
+ Milvus
+ 2.4.x
+ Standalone / Cluster
+ HNSW 索引，1536 维
+ Neo4j
+ 5.x Community / Enterprise
+ Causal Cluster
+ Enterprise 支持行级安全
+ Nginx Ingress
+ 1.9.x
+ Ingress Controller
+ —
+ Prometheus
+ 2.50+
+ —
+ —
+ Grafana
+ 11.x
+ —
+ —
+ OpenTelemetry Collector
+ 0.100+
+ DaemonSet / Deployment
+ OTLP gRPC 导出
+ 11.3 依赖锁定文件
+ 使用 uv 或 poetry 锁定全部依赖，确保可复现安装。以下为核心 pyproject.toml 片段：
+ [project]
+name = "agent-platform"
+version = "1.0.0"
+requires-python = ">=3.12"
+[project.dependencies]
+# 核心框架
+langchain = ">=0.3.0,<0.4.0"
+langgraph = ">=0.2.0,<0.3.0"
+langchain-mcp-adapters = ">=0.2.1,<0.3.0"
+langsmith = ">=0.1.0,<0.2.0"
+llama-index = ">=0.12.0,<0.13.0"
+mcp = ">=1.0.0,<2.0.0"
+# Agent 扩展
+deepagent = ">=0.1.0,<0.2.0"
+# 数据层
+asyncpg = ">=0.29.0"
+redis = {version = ">=5.0.0", extras = ["hiredis"]}
+pymilvus = ">=2.4.0"
+neo4j = ">=5.20.0"
+# 可观测性
+opentelemetry-sdk = ">=1.25.0"
+opentelemetry-exporter-otlp = ">=1.25.0"
+# Web 框架
+fastapi = ">=0.110.0"
+uvicorn = {version = ">=0.29.0", extras = ["standard"]}
+[tool.uv]
+dev-dependencies = [
+ "pytest>=8.0.0",
+ "pytest-asyncio>=0.23.0",
+ "ruff>=0.4.0",
+ "mypy>=1.10.0",
+] 
+ 12 实施路线图
+ 整个平台分为四个阶段交付，每个阶段产出可独立验证的成果。阶段之间允许重叠，但后一阶段的启动依赖前一阶段的核心能力就绪。
+ 12.1 阶段规划
+ 08/02 08/09 08/16 08/23 08/30 09/06 09/13 09/20 09/27 10/04 10/11 10/18 10/25 K8s 集群搭建 数据层部署 可观测性接入 LangGraph 编排层 Agent Runtime 实现 Checkpoint 状态管理 MCP Gateway 开发 企业工具 MCP 封装 LlamaIndex RAG 管道 安全防护层实现 成本控制与模型路由 灰度发布与压测 阶段一：基础设施 阶段二：核心引擎 阶段三：协议与集成 阶段四：生产化 实施路线图（16 周） 
+ 图 12-1：四阶段交付甘特图 
+ 12.2 各阶段交付物
+ 阶段一：基础设施搭建（第 1-3 周）
+ 交付物
+ 验收标准
+ K8s 集群
+ 3 节点集群就绪，Ingress、Cert-Manager、GPU Operator 正常运行
+ 数据层
+ PostgreSQL HA、Redis Cluster、Milvus、Neo4j 部署完成，连接测试通过
+ 可观测性
+ LangSmith 接入验证，Prometheus + Grafana 仪表盘可展示基础指标
+ CI/CD
+ GitLab CI / GitHub Actions 流水线就绪，支持自动构建、测试、部署
+ 阶段二：核心引擎实现（第 4-6 周）
+ 交付物
+ 验收标准
+ Workflow API
+ 支持工作流创建、查询、状态管理；通过 OpenAPI 文档验收
+ Agent Runtime
+ 支持单 Agent 执行、工具调用、记忆读写；LangSmith Trace 可见
+ Checkpoint 机制
+ 工作流中断后可恢复；线程状态可在 PostgreSQL 中持久化
+ Supervisor 模式
+ 多 Agent 协作 demo 通过：Supervisor 可分发任务给子 Agent
+ 阶段三：协议与集成（第 7-9 周）
+ 交付物
+ 验收标准
+ MCP Gateway
+ 支持工具注册、发现、调用；协议兼容 MCP 1.0 规范
+ 企业工具封装
+ 至少 5 个业务系统 MCP Server 上线（如 OA、CRM、ERP）
+ RAG 管道
+ 文档接入 → 索引 → 检索全链路打通；Agentic RAG 支持多轮检索
+ Agent ↔ MCP 联调
+ Agent 可通过 MCP 协议调用企业工具，返回结果正确
+ 阶段四：生产化加固（第 10-12 周）
+ 交付物
+ 验收标准
+ 安全防护层
+ Input/Output Guard 上线，工具白名单生效，审计日志可查
+ 成本控制
+ 模型路由策略生效，Token 预算管理可用，语义缓存命中率 > 30%
+ 灰度发布
+ 支持按租户 / 按流量灰度，可一键回滚
+ 压测报告
+ P95 延迟 < 5s（单工作流），支持 50 并发工作流执行
+ 12.3 团队配置建议
+ 角色
+ 人数
+ 核心职责
+ 架构师
+ 1
+ 架构决策、技术选型评审、跨层接口定义
+ 后端工程师
+ 3-4
+ Workflow / Agent / MCP 各层实现
+ AI 工程师
+ 1-2
+ Prompt 工程、RAG 管道调优、Agent 行为评测
+ DevOps 工程师
+ 1
+ K8s 运维、CI/CD、监控告警配置
+ QA 工程师
+ 1
+ 集成测试、压测、Agent 行为回归测试
+ 13 风险评估与应对
+ 本章识别架构实施与运行阶段的主要风险，并给出应对方案。风险按影响范围和发生概率分级，每项风险需有明确的负责人和缓解措施。
+ 13.1 技术风险
+ 风险项
+ 概率
+ 影响
+ 应对方案
+ LangGraph / LangChain 版本破坏性变更
+ 中
+ 高
+ 锁定 minor 版本，每次升级前在 staging 环境全量回归；订阅 LangChain changelog
+ MCP 协议规范迭代导致不兼容
+ 低
+ 中
+ MCP Gateway 做协议版本协商，支持多版本共存；MCP 1.0 已稳定，短期风险低
+ LLM 供应商服务不可用
+ 中
+ 高
+ 多模型 fallback 策略（主 → 备 → 本地模型）；请求级熔断 + 降级到缓存结果
+ Agent 执行陷入无限循环
+ 高
+ 中
+ 硬性限制：最大规划轮次 15、最大工具调用 30、单次执行超时 120s；超过自动终止并告警
+ Milvus 大规模向量检索延迟升高
+ 中
+ 中
+ HNSW 参数调优（efConstruction=256, M=16）；分片策略按 tenant_id 路由；必要时升级到集群版
+ Checkpoint 数据膨胀导致 PostgreSQL 慢查询
+ 中
+ 中
+ 定期清理已完成线程的 checkpoint（保留 7 天）；对 checkpoint 表做分区
+ 13.2 安全风险
+ 风险项
+ 概率
+ 影响
+ 应对方案
+ Prompt 注入攻击
+ 高
+ 高
+ Input Guard 双层检测（规则 + 分类模型）；工具白名单限制可执行操作；敏感操作强制人工审批
+ Agent 越权访问其他租户数据
+ 低
+ 极高
+ tenant_id 在所有查询中强制注入；向量库行级过滤；审计日志全链路追踪
+ API Key / 凭证泄露
+ 中
+ 高
+ 凭证统一存储在 K8s Secret + 外部密钥管理（如 HashiCorp Vault）；定期轮换；日志脱敏
+ 工具返回敏感信息未脱敏
+ 中
+ 高
+ Output Guard 对所有工具返回结果做 PII 检测与脱敏；按工具配置敏感字段规则
+ 13.3 运营风险
+ 风险项
+ 概率
+ 影响
+ 应对方案
+ LLM 推理成本超预算
+ 高
+ 中
+ Token 预算硬限制；模型路由降级策略；语义缓存提升命中率；按租户设置消费上限
+ Agent 输出质量不稳定
+ 高
+ 高
+ 建立 Agent 行为评测集（Golden Set）；CI 中加入回归测试；LangSmith 评估面板持续监控
+ 知识库内容过时导致错误回答
+ 中
+ 中
+ 文档 freshness 评分机制；定期触发重新索引；RAG 返回结果附带文档时间戳供 Agent 判断
+ 业务系统集成变更导致工具失效
+ 中
+ 中
+ MCP Server 增加健康检查探针；工具调用失败率告警；关键工具准备降级方案
+ 13.4 风险优先级矩阵
+ 低概率
+ 中概率
+ 高概率
+ 高影响
+ 越权访问
+ 监控预案 
+ LLM 不可用
+凭证泄露
+ 监控预案 
+ Prompt 注入
+输出质量不稳
+ 立即处理 
+ 中影响
+ —
+ 版本破坏性变更
+Milvus 延迟
+知识库过时
+ 监控预案 
+ Agent 无限循环
+成本超预算
+ 立即处理 
+ 低影响
+ —
+ —
+ —
+ 图 13-1：风险优先级矩阵（红=立即处理，黄=监控预案，绿=接受风险） 
+ 实施建议 
+ 前两项需在阶段二（核心引擎）就引入防护：Agent 无限循环的硬性限制在 Agent Runtime 中实现，Prompt 注入检测在编排层入口部署。LLM 不可用的多模型 fallback 策略需在阶段三完成，因为此时已具备多模型路由能力。其余风险按阶段逐步覆盖。
+ 参考资料
+ Alice Labs, LangGraph Tutorial 2026: Build Stateful AI Agents for Enterprise. 详述 LangGraph 图编排、状态持久化、人在回路能力。 
+ https://alicelabs.ai/en/insights/langgraph-guide-2026 
+ LangChain, The best AI agent frameworks in 2026. 框架能力对比与生态规模。 
+ https://www.langchain.com/resources/ai-agent-frameworks 
+ PyPI, langchain-mcp-adapters 0.2.1. MCP 适配器包，将 MCP Server 工具转为 LangChain Tool。 
+ https://pypi.org/project/langchain-mcp-adapters/0.2.1/ 
+ Bridgers Agency, LangChain Deep Agents: The Open-Source Framework for Building Production-Ready Autonomous AI Agents. DeepAgent 架构与能力分析。 
+ https://www.bridgers.agency/en/blog/langchain-deep-agents-framework-production-ai-agents 
+ ChatForest, MCP and AI Frameworks: How LangChain, LangGraph, CrewAI, LlamaIndex, and 10+ Frameworks Integrate the Model Context Protocol. MCP 生态全景与双向支持分析。 
+ https://chatforest.com/guides/mcp-ai-frameworks-langchain-langgraph-crewai/ 
+ LangChain Docs, MCP endpoint in Agent Server. Agent Server 将 LangGraph Agent 暴露为 MCP 工具。 
+ https://docs.langchain.com/langsmith/server-mcp.md 
+ KriraAI, Microsoft Agent Framework 1.0: The Enterprise Multi-Agent Standard. MAF 1.0 GA 时间与企业特性。 
+ https://www.kriraai.com/blog/microsoft-agent-framework-1enterprise-multi-agent-orchestration 
+ Agent Nexus, Dify vs LangChain: AI Development Platforms Compared (2026). 平台型 vs 框架型对比。 
+ https://agent.nexus/blog/dify-vs-langchain 
+ Easton Dev, LangGraph State Management: Checkpoints, Thread State, and Failure Recovery. Checkpoint 机制详解。 
+ https://eastondev.com/blog/en/posts/ai/20260424-langgraph-agent-architecture/ 
+ Heart.Think.Do, LangGraph 中的 Agent Supervisor 模式. Supervisor 模式实现详解。 
+ http://www.heartthinkdo.com/?p=4317 
+ iEnable, CrewAI vs LangChain vs AutoGen: Which AI Agent Framework Should Your Enterprise Use in 2026? 企业级框架对比，含 92% 企业多框架并存数据。 
+ https://ienable.ai/blog/crewai-vs-langchain-vs-autogen-enterprise-comparison-2026.html 
+ MLflow, Building Production-Ready AI Agents in 2026. 生产级 Agent 架构实践指南。 
+ https://mlflow.org/articles/building-production-ready-ai-agents-in-2026 
+ CSDN, 企业级AI Agent技术架构设计：从原型到生产的可实操指南. 五层 EAAF 架构与三层记忆体系。 
+ https://blog.csdn.net/m0_37988015/article/details/161917425 
+ LangChain, LangChain Announces Enterprise Agentic AI Platform Built with NVIDIA. LangSmith 可观测性规模数据。 
+ https://www.langchain.com/blog/nvidia-enterprise 
+ Dataiku, Enterprise agent systems: how to design, deploy, and govern AI agent networks at scale. 企业级 Agent 治理与部署指南。 
+ https://www.dataiku.com/stories/blog/enterprise-agent-systems 
+ Microsoft DevBlogs, Semantic Kernel adds Model Context Protocol (MCP) support for Python. MCP 原生支持与双向能力。 
+ https://devblogs.microsoft.com/agent-framework/semantic-kernel-adds-model-context-protocol-mcp-support-for-python/ 
+ 

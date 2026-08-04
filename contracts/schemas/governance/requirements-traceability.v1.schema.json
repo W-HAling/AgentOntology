@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/requirements-traceability.v1.schema.json",
+  "title": "Requirements Traceability v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "matrix_id",
+    "version",
+    "generated_at",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "matrix_id": {
+      "type": "string",
+      "pattern": "^MATRIX-[A-Z0-9-]+$"
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      },
+      "uniqueItems": true
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "version",
+        "status",
+        "path",
+        "digest"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9-]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "evidence",
+            "user_requirement",
+            "planning_requirement",
+            "design_requirement",
+            "lld",
+            "adr",
+            "contract",
+            "scenario",
+            "design_task",
+            "implementation_task",
+            "artifact",
+            "test",
+            "verification",
+            "release_gate"
+          ]
+        },
+        "version": {
+          "$ref": "#/$defs/semver"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "registered",
+            "discovered",
+            "validated",
+            "confirmed",
+            "proposed",
+            "planned",
+            "ready",
+            "in_progress",
+            "blocked",
+            "verified",
+            "accepted",
+            "superseded",
+            "rejected",
+            "invalidated"
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "relation",
+        "source",
+        "target",
+        "source_version",
+        "target_version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^EDGE-[0-9]{4}$"
+        },
+        "relation": {
+          "type": "string",
+          "enum": [
+            "supports",
+            "realized_by",
+            "scheduled_by",
+            "refined_by",
+            "produces",
+            "specified_by",
+            "accepted_by",
+            "approved_by",
+            "authorizes",
+            "verified_by",
+            "evidenced_by",
+            "gates"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9-]+$"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9-]+$"
+        },
+        "source_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "target_version": {
+          "$ref": "#/$defs/semver"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}
