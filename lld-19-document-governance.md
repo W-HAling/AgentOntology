@@ -65,7 +65,12 @@ LLD-19 是需求证据、规划、设计、执行、追溯、执行台账与 Sta
 
 ## 5. 审批与变更状态
 
-本文档当前为 `Proposed`，没有 `APPROVED` review、合格 CODEOWNER 审查者、当前 head SHA、review node ID 或正文摘要绑定证据，因此不得标记为 `Accepted`，不得作为“已批准 LLD”签发实现任务。
+本文档当前为 `Proposed`，未获得独立人工批准，不得据此声称设计已 `Accepted`。
+
+- `GOVEX-STAGEA-001` 是仓库所有者在单维护者启动期授权的人工例外，证据为 GitHub PR #1 评论 `IC_kwDOTtGv_c8AAAABNF4sXw`；它只解除任务 0 的独立审查者阻塞，不构成独立 `APPROVED` review。
+- 该例外不得用于发布、密钥、权限或生产执行任务；仓库出现第二名合格协作者后立即失效，后续 `Accepted` 状态恢复独立审查要求。
+- 实现任务 11、13 仍必须等待可验证的 LLD 中期批准基线，不得把本例外解释为实现授权。
+- `atomic_design_manifest_digest` 仍待评审流水线计算；人工不得手填。
 
 后续进入 `In Review` 或 `Accepted` 时，只能由检查器根据 GitHub API、仓库 ID、PR 编号、当前 head SHA、review node ID、CODEOWNERS、审查时权限及文档摘要计算结果确定。任何正文、section、原子清单、CODEOWNERS 或权限变化都会使既有批准失效并回到 `In Review`。
 

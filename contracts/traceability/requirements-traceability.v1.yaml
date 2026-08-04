@@ -204,99 +204,99 @@ nodes:
 - id: DTASK-STAGEA-000
   kind: design_task
   version: 0.1.0
-  status: in_progress
+  status: blocked
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:0c13475e334e721da22a654ce22c120c9df262014bccac8fb53f135551769f81
 - id: DTASK-STAGEA-001
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:57e93bc2c52b0deb7dec1905e63d953989c3c526ef9dcb1a6a4de4197a36121d
 - id: DTASK-STAGEA-002
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:7fd8cf72743eea86e5f508861e955875c26b86f6e9d09eb1a948a3db83c17e89
 - id: DTASK-STAGEA-003
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:ed61844993df8b078b8a678ee7a53d4f8f47c44b576bb250e7a45d8d2eaf9208
 - id: DTASK-STAGEA-004
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:6e031246743332360ca8ce1f6b5d045ff7dd034afb1a24ec81f0396bdaf5c76f
 - id: DTASK-STAGEA-005
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:5dc15050ab895196fe55f85fd4a2ef12973b115e314a408939dec087ff44fb06
 - id: DTASK-STAGEA-006
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:ada876130ccd14c273a1a469837b6300d0215455930bdd993f3128f68f5844ce
 - id: DTASK-STAGEA-007
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:90a23c4e7ea289d676ec86fd002cd4dd572f7ae4f96ee29e4a26055260de625d
 - id: DTASK-STAGEA-008
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:310d16529cb94f23c74a0fce46b5898b7248b4947e5dcb91ad37bbc366460059
 - id: DTASK-STAGEA-009
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:c1fd25978c12870443e21e83eaf6d096d6f075267c3c3bdcda477ff267ddfd74
 - id: DTASK-STAGEA-010
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:d7d213cf077ece5111a3011153e29e88aa390c8ca70049f1171adb28c71739bd
 - id: DTASK-STAGEA-012
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:270d9f0c8a8c887c9412290fdf2b2d3e328f656b2fe77d40ff7a32180164f6dc
 - id: DTASK-STAGEA-014
   kind: design_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:ff48b9e2d3bba6cefc64d1ebcec51b4269ba9cace262ea736b4d10740b96f06a
 - id: TASK-STAGEA-011
   kind: implementation_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:9b5ae9300b427e0ada0442f06dbd9f8ffa44e8fbe6735d4121451e1ad5b16b4c
 - id: TASK-STAGEA-013
   kind: implementation_task
   version: 0.1.0
   status: planned
   path: contracts/execution/stage-a-execution-ledger.v1.yaml
-  digest: sha256:8ca2e7dc7ac01b9bdad6a12558d6e78d09750de391357b563e7aefbf0e39a938
+  digest: sha256:d3abd449b75e3487b7618c290dea38cf61bef0765c27ac9df0c30e275f3b7d50
 - id: LLD-19
   kind: lld
   version: 0.1.0
   status: proposed
   path: lld-19-document-governance.md
-  digest: sha256:bf863434545647e509b682cdf55ba5f8ec751fd8b15a7a34d93c9e77df1b270d
+  digest: sha256:aca52b6e11644aeeae4c97685bc725fe9a7405f197e960bef9397c115bbf7608
 edges:
 - id: EDGE-0001
   relation: supports

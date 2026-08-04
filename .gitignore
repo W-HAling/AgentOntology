@@ -1,5 +1,6 @@
 *
 !.gitignore
+!.gitattributes
 !.github/
 !.github/CODEOWNERS
 !Palantir的本体论讨论.docx

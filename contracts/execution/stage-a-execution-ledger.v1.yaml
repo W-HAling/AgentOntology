@@ -34,7 +34,7 @@ design_tasks:
     digest: sha256:88ab14b16c960f4f852cf7dd823d30b21d62834d18bf40b3ecd82917fd8f6936
     kind: work_product
   - path: lld-19-document-governance.md
-    digest: sha256:bf863434545647e509b682cdf55ba5f8ec751fd8b15a7a34d93c9e77df1b270d
+    digest: sha256:aca52b6e11644aeeae4c97685bc725fe9a7405f197e960bef9397c115bbf7608
     kind: work_product
   blocked_reason: PR-ONTO-006 尚未基于 confirmed UR 获得 Product Owner 确认；当前产物仅可作为待评审工作成果，不得进入 verified 或 accepted
   started_at: '2026-08-03T00:00:00+08:00'

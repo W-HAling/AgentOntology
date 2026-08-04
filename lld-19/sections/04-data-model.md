@@ -7,7 +7,8 @@
 
 - 所有 ID 全局唯一并匹配各自前缀；版本使用 SemVer；时间使用带时区 RFC 3339。
 - 所有路径为仓库根目录相对 POSIX 路径，不允许绝对路径、反斜杠或 `..` 越界。
-- 摘要格式为 `sha256:<64 个小写十六进制字符>`，基于规范化 UTF-8 字节计算。
+- 摘要格式为 `sha256:<64 个小写十六进制字符>`。
+- 普通文件节点对仓库文件原始字节计算 SHA-256；指向执行台账的 `design_task|implementation_task` 节点对台账中同 ID 的任务对象执行“UTF-8、JSON、键名排序、紧凑分隔符、保留数组顺序”的规范化序列化后计算 SHA-256，禁止对包含摘要引用的整份台账做自引用摘要。
 - YAML/JSON 顶层必须声明 `$schema`，未知字段默认拒绝。
 - 实体正文由对应治理 Schema 唯一定义；本节定义跨实体语义和关系约束。
 
@@ -68,7 +69,7 @@
 | test | evidenced_by | verification |
 | verification | gates | release_gate |
 
-其他 kind/relation 组合一律非法。`source_version` 和 `target_version` 必须等于端点版本；摘要必须匹配当前文件。
+其他 kind/relation 组合一律非法。`source_version` 和 `target_version` 必须等于端点版本；普通文件节点摘要必须匹配当前文件，任务节点摘要必须匹配执行台账中的同 ID 规范化任务对象。
 
 ## 5. 图不变量
 
