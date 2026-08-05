@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/design-task.v1.schema.json",
+  "title": "Design Task v1",
+  "type": "object",
+  "required": [
+    "id",
+    "plan_task",
+    "title",
+    "status",
+    "planning_refs",
+    "allowed_artifact_kinds",
+    "files",
+    "commands",
+    "expected_results",
+    "evidence",
+    "blocked_reason",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DTASK-STAGE[A-F]-[0-9]{3}$"
+    },
+    "plan_task": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 14
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "$ref": "#/$defs/taskStatus"
+    },
+    "planning_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^PR-[A-Z0-9]+-[0-9]{3}$"
+      }
+    },
+    "allowed_artifact_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "requirement",
+          "lld",
+          "adr",
+          "contract",
+          "design_gate",
+          "traceability",
+          "governance"
+        ]
+      }
+    },
+    "files": {
+      "$ref": "#/$defs/paths"
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expected_results": {
+      "$ref": "#/$defs/nonEmptyStrings"
+    },
+    "evidence": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/evidenceRef"
+      }
+    },
+    "blocked_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "started_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blocked_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "blocked_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ready",
+              "in_progress",
+              "verified",
+              "accepted"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "planning_refs": {
+            "minItems": 1
+          },
+          "commands": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 1,
+            "contains": {
+              "properties": {
+                "kind": {
+                  "const": "verification"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            }
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 2,
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "kind": {
+                      "const": "verification"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "kind": {
+                      "const": "approval"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            ]
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "not": {
+              "enum": [
+                "verified",
+                "accepted"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "completed_at": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "in_progress"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "planned"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "commands": {
+            "maxItems": 0
+          },
+          "evidence": {
+            "maxItems": 0
+          },
+          "started_at": {
+            "type": "null"
+          },
+          "completed_at": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "taskStatus": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "ready",
+        "in_progress",
+        "blocked",
+        "verified",
+        "accepted"
+      ]
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/repositoryPath"
+      }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "required": [
+        "path",
+        "digest",
+        "kind"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "work_product",
+            "verification",
+            "approval"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

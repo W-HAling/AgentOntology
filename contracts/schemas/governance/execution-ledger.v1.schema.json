@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentontology.local/contracts/schemas/governance/execution-ledger.v1.schema.json",
+  "title": "Execution Ledger v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "ledger_id",
+    "version",
+    "stage",
+    "updated_at",
+    "design_tasks",
+    "implementation_tasks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ledger_id": {
+      "type": "string",
+      "pattern": "^LEDGER-STAGE-[A-F]$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "stage": {
+      "type": "string",
+      "pattern": "^Stage [A-F]$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "design_tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "design-task.v1.schema.json"
+      },
+      "uniqueItems": true
+    },
+    "implementation_tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "execution-task.v1.schema.json"
+      },
+      "uniqueItems": true
+    }
+  },
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-A"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage A"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-B"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage B"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-C"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage C"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-D"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage D"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-E"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage E"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ledger_id": {
+            "const": "LEDGER-STAGE-F"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "Stage F"
+          }
+        }
+      }
+    }
+  ]
+}
